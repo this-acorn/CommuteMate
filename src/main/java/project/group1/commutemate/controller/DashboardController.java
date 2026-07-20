@@ -16,6 +16,7 @@ import project.group1.commutemate.model.RideRequest;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 import project.group1.commutemate.service.TransitService;
+import project.group1.commutemate.service.WeatherService;
 
 /** Rider and driver dashboards. */
 @Controller
@@ -25,17 +26,20 @@ public class DashboardController extends AuthenticatedController {
     private final RideCoordinationService coordinationService;
     private final Clock clock;
     private final TransitService transitService;
+    private final WeatherService weatherService;
 
     public DashboardController(RideService rideService,
                                RideCoordinationService coordinationService,
                                CurrentUserService currentUserService,
                                Clock clock,
-                               TransitService transitService) {
+                               TransitService transitService,
+                               WeatherService weatherService) {
         super(currentUserService);
         this.rideService = rideService;
         this.coordinationService = coordinationService;
         this.clock = clock;
         this.transitService = transitService;
+        this.weatherService = weatherService;
     }
 
     // rider
@@ -65,6 +69,7 @@ public class DashboardController extends AuthenticatedController {
         model.addAttribute("availableRideCount",
                 upcoming.stream().filter(ride -> !ride.isFull()).count());
         model.addAttribute("transit", transitService.getTransitInfo());
+        model.addAttribute("weather", weatherService.getCurrentWeather().orElse(null));
         return "dashboard-rider";
     }
 
@@ -84,6 +89,7 @@ public class DashboardController extends AuthenticatedController {
                 .filter(request -> request.getStatus() == RequestStatus.CONFIRMED)
                 .count());
         model.addAttribute("transit", transitService.getTransitInfo());
+        model.addAttribute("weather", weatherService.getCurrentWeather().orElse(null));
         return "dashboard-driver";
     }
 }

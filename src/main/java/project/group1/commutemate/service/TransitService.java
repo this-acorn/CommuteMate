@@ -3,7 +3,10 @@ package project.group1.commutemate.service;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -28,6 +31,8 @@ import project.group1.commutemate.model.TransitInfo;
 @Service
 public class TransitService {
 
+    private static final Logger log = LoggerFactory.getLogger(TransitService.class);
+
     /** RTTI real-time bus estimates for a single stop. {stop} and {key} are filled in per request. */
     private static final String ESTIMATES_URL =
             "https://api.translink.ca/rttiapi/v1/stops/{stop}/estimates?apikey={key}&count=5";
@@ -39,31 +44,42 @@ public class TransitService {
     /** At most this many alerts on the dashboard card, so it stays readable. */
     private static final int MAX_ALERTS = 5;
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
     private final String apiKey;
     private final String stopNo;
 
+    /**
+     * Takes the Spring-managed builder rather than {@code RestClient.create()} so the
+     * connect/read timeouts in application.properties apply: without them a slow (rather
+     * than dead) TransLink never throws, and the dashboard request thread hangs instead of
+     * falling through to the "temporarily unavailable" card.
+     */
     public TransitService(
+            RestClient.Builder restClientBuilder,
             @Value("${translink.api.key}") String apiKey,
             @Value("${translink.stop-no}") String stopNo) {
+        this.restClient = restClientBuilder.build();
         this.apiKey = apiKey;
         this.stopNo = stopNo;
     }
 
     /**
-     * Bundles everything the dashboard needs. When the arrivals call fails
-     * (e.g. the TransLink API is unreachable) apiAvailable is false, so the
-     * view can show an error while the rest of the page keeps working.
+     * Bundles everything the dashboard needs. The two feeds fail independently:
+     * when either call fails (e.g. the TransLink API is unreachable) its
+     * "available" flag is false, so the view can show an error for that section
+     * while the rest of the page keeps working.
      */
     public TransitInfo getTransitInfo() {
         List<BusArrival> arrivals = fetchArrivals();   // null signals the API is unreachable
+        List<ServiceAlert> alerts = fetchAlerts();     // null signals the feed is unreachable
         boolean apiAvailable = (arrivals != null);
-        List<ServiceAlert> alerts = fetchAlerts();
+        boolean alertsAvailable = (alerts != null);
 
         return new TransitInfo(
                 apiAvailable,
                 apiAvailable ? arrivals : List.of(),
-                alerts);
+                alertsAvailable,
+                alertsAvailable ? alerts : List.of());
     }
 
     /**
@@ -77,14 +93,21 @@ public class TransitService {
                     .uri(ESTIMATES_URL, stopNo, apiKey)
                     .accept(MediaType.APPLICATION_JSON)   // TransLink returns XML unless we ask for JSON
                     .retrieve()
-                    // A 4xx (e.g. "no stops found") means "no upcoming buses", not an outage,
-                    // so swallow it here and let parseArrivals return an empty list below.
-                    .onStatus(status -> status.is4xxClientError(), (request, response) -> { })
+                    // 404 is how TransLink says "no stops found" / "no service right now", which
+                    // really is "no upcoming buses", so swallow it and let parseArrivals return an
+                    // empty list below. Every other 4xx (401 bad key, 403 no access, 429 rate
+                    // limited) is a real failure on our side and must not be shown to riders as
+                    // "no buses due", so let the default handler throw and fail the call.
+                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(),
+                            (request, response) -> { })
                     .body(JsonNode.class);
 
             return parseArrivals(root);
         } catch (Exception e) {
-            return null;   // network error / 5xx / unparseable payload -> API unavailable
+            // Riders only ever see "unavailable", so log the cause: a bad key or a hit rate limit
+            // is indistinguishable from a TransLink outage otherwise.
+            log.warn("TransLink RTTI call for stop {} failed: {}", stopNo, e.toString());
+            return null;   // network error / auth / rate limit / 5xx -> API unavailable
         }
     }
 
@@ -113,8 +136,9 @@ public class TransitService {
 
     /**
      * Active service alerts from the TransLink GTFS-realtime feed (protobuf).
-     * Returns an empty list when there are no alerts or the feed is unreachable,
-     * which the dashboard renders as "No active service alerts."
+     * Returns the active alerts (an empty list when the network has none), or
+     * null when the feed call itself fails, so the dashboard can tell
+     * "no alerts right now" apart from "we could not check".
      */
     private List<ServiceAlert> fetchAlerts() {
         try {
@@ -123,7 +147,8 @@ public class TransitService {
                     .retrieve()
                     .body(byte[].class);
             if (feed == null) {
-                return List.of();
+                log.warn("TransLink alerts feed returned an empty body");
+                return null;   // empty body -> we never got a usable feed
             }
 
             FeedMessage message = FeedMessage.parseFrom(feed);
@@ -144,7 +169,8 @@ public class TransitService {
             }
             return alerts;
         } catch (Exception e) {
-            return List.of();
+            log.warn("TransLink alerts feed call failed: {}", e.toString());
+            return null;   // network error / 5xx / unparseable protobuf -> feed unavailable
         }
     }
 

@@ -64,6 +64,16 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
+		<!--
+			epic2: calling the TransLink API with RestClient. Boot 4 split the outgoing HTTP
+			client out of spring-boot-starter-web, so this starter is what supplies the
+			RestClient.Builder bean and applies the spring.http.client.* timeouts.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-restclient</artifactId>
+		</dependency>
+
 		<!-- epic2: parse TransLink's GTFS-realtime service alerts feed (protobuf) -->
 		<dependency>
 			<groupId>org.mobilitydata</groupId>

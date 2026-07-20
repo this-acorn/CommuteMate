@@ -169,7 +169,11 @@
             <!-- Service alerts -->
             <div class="mt-4 border-t border-border pt-3">
               <p class="text-xs font-medium text-muted-foreground">Service alerts</p>
-              <p th:if="${#lists.isEmpty(transit.alerts())}" class="mt-1 text-xs text-muted-foreground">
+              <!-- The alerts feed failed on its own: don't claim there are no alerts when we could not check. -->
+              <p th:if="${!transit.alertsAvailable()}" class="mt-1 text-xs text-destructive">
+                Service alerts are temporarily unavailable.
+              </p>
+              <p th:if="${transit.alertsAvailable() and #lists.isEmpty(transit.alerts())}" class="mt-1 text-xs text-muted-foreground">
                 No active service alerts.
               </p>
               <div th:each="alert : ${transit.alerts()}"

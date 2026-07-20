@@ -1,6 +1,7 @@
 package project.group1.commutemate.controller;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -27,8 +28,9 @@ import project.group1.commutemate.model.TransitInfo;
 import project.group1.commutemate.service.TransitService;
 
 /**
- * Renders the rider dashboard with a stubbed TransitService to verify the four
- * US-10 outcomes: buses + alerts shown, no buses, no alerts, and API unavailable.
+ * Renders the rider dashboard with a stubbed TransitService to verify the US-10
+ * outcomes: buses + alerts shown, no buses, no alerts, alerts feed unavailable,
+ * and API unavailable.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -54,6 +56,7 @@ class DashboardTransitViewTest {
         when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
                 true,
                 List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
+                true,
                 List.of(new ServiceAlert("Test Alert Bravo", "Detour in effect"))));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
@@ -69,6 +72,7 @@ class DashboardTransitViewTest {
         when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
                 true,
                 List.of(),
+                true,
                 List.of(new ServiceAlert("Test Alert Bravo", "Detour in effect"))));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
@@ -81,6 +85,7 @@ class DashboardTransitViewTest {
         when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
                 true,
                 List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
+                true,
                 List.of()));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
@@ -88,9 +93,24 @@ class DashboardTransitViewTest {
                 .andExpect(content().string(containsString("No active service alerts.")));
     }
 
+    /** A failed alerts feed must not be reported as "no active alerts". */
+    @Test
+    void showsErrorWhenAlertsFeedUnavailable() throws Exception {
+        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
+                true,
+                List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
+                false,
+                List.of()));
+
+        mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Service alerts are temporarily unavailable.")))
+                .andExpect(content().string(not(containsString("No active service alerts."))));
+    }
+
     @Test
     void showsErrorWhenApiUnavailable() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(false, List.of(), List.of()));
+        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(false, List.of(), false, List.of()));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())

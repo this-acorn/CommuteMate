@@ -1,13 +1,22 @@
 package project.group1.commutemate.service;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -15,27 +24,29 @@ import com.google.transit.realtime.GtfsRealtime.Alert;
 import com.google.transit.realtime.GtfsRealtime.FeedEntity;
 import com.google.transit.realtime.GtfsRealtime.FeedMessage;
 import com.google.transit.realtime.GtfsRealtime.TranslatedString;
-
-import tools.jackson.databind.JsonNode;
+import com.google.transit.realtime.GtfsRealtime.TripUpdate;
 
 import project.group1.commutemate.model.BusArrival;
 import project.group1.commutemate.model.ServiceAlert;
 import project.group1.commutemate.model.TransitInfo;
 
 /**
- * Fetches real-time transit information from the TransLink Open API:
- * upcoming bus arrivals at a stop (RTTI) and active service alerts
- * (GTFS-realtime). Every call degrades gracefully so a TransLink outage
- * never breaks the dashboard.
+ * Fetches real-time transit information from TransLink's GTFS-realtime V3 API:
+ * upcoming departures from our stop (trip updates) and active service alerts.
+ * Every call degrades gracefully so a TransLink outage never breaks the dashboard.
+ *
+ * <p>This used to call the RTTI Open API, which TransLink retired on 3 December
+ * 2024 — its host stopped resolving, so every lookup failed no matter what API
+ * key was configured. GTFS-realtime is the documented replacement.</p>
  */
 @Service
 public class TransitService {
 
     private static final Logger log = LoggerFactory.getLogger(TransitService.class);
 
-    /** RTTI real-time bus estimates for a single stop. {stop} and {key} are filled in per request. */
-    private static final String ESTIMATES_URL =
-            "https://api.translink.ca/rttiapi/v1/stops/{stop}/estimates?apikey={key}&count=5";
+    /** Real-time trip updates for the whole network. {key} is filled in per request. */
+    private static final String TRIP_UPDATES_URL =
+            "https://gtfsapi.translink.ca/v3/gtfsrealtime?apikey={key}";
 
     /** GTFS-realtime service alerts for the whole TransLink network. {key} is filled in per request. */
     private static final String ALERTS_URL =
@@ -44,9 +55,20 @@ public class TransitService {
     /** At most this many alerts on the dashboard card, so it stays readable. */
     private static final int MAX_ALERTS = 5;
 
+    /** At most this many upcoming buses, matching what the card has room for. */
+    private static final int MAX_ARRIVALS = 5;
+
+    /** A bus that left up to this long ago is still worth showing as "Due now". */
+    private static final Duration JUST_MISSED = Duration.ofSeconds(30);
+
+    private static final DateTimeFormatter CLOCK_TIME =
+            DateTimeFormatter.ofPattern("h:mma", Locale.ENGLISH);
+
     private final RestClient restClient;
+    private final RouteCatalog routeCatalog;
+    private final Clock clock;
     private final String apiKey;
-    private final String stopNo;
+    private final Set<String> stopIds;
     private final String stopName;
 
     /**
@@ -57,13 +79,24 @@ public class TransitService {
      */
     public TransitService(
             RestClient.Builder restClientBuilder,
+            RouteCatalog routeCatalog,
+            Clock clock,
             @Value("${translink.api.key}") String apiKey,
-            @Value("${translink.stop-no}") String stopNo,
+            @Value("${translink.stop-ids}") String stopIds,
             @Value("${translink.stop-name:}") String stopName) {
         this.restClient = restClientBuilder.build();
+        this.routeCatalog = routeCatalog;
+        this.clock = clock;
         this.apiKey = apiKey;
-        this.stopNo = stopNo;
+        this.stopIds = parseStopIds(stopIds);
         this.stopName = stopName;
+    }
+
+    private static Set<String> parseStopIds(String configured) {
+        return Arrays.stream(configured.split(","))
+                .map(String::strip)
+                .filter(id -> !id.isEmpty())
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
     }
 
     /**
@@ -79,7 +112,6 @@ public class TransitService {
         boolean alertsAvailable = (alerts != null);
 
         return new TransitInfo(
-                stopNo,
                 stopName,
                 apiAvailable,
                 apiAvailable ? arrivals : List.of(),
@@ -88,55 +120,92 @@ public class TransitService {
     }
 
     /**
-     * Calls the TransLink RTTI API for the configured stop.
-     * Returns the list of upcoming buses (possibly empty when the stop has no
-     * service right now), or null when the API call itself fails.
+     * Upcoming departures from our stop, or null when the feed call itself fails.
+     * An empty list is a real answer: GTFS-realtime only reports trips that are
+     * actually running, so outside service hours there is genuinely nothing due.
      */
     private List<BusArrival> fetchArrivals() {
         try {
-            JsonNode root = restClient.get()
-                    .uri(ESTIMATES_URL, stopNo, apiKey)
-                    .accept(MediaType.APPLICATION_JSON)   // TransLink returns XML unless we ask for JSON
+            byte[] feed = restClient.get()
+                    .uri(TRIP_UPDATES_URL, apiKey)
                     .retrieve()
-                    // 404 is how TransLink says "no stops found" / "no service right now", which
-                    // really is "no upcoming buses", so swallow it and let parseArrivals return an
-                    // empty list below. Every other 4xx (401 bad key, 403 no access, 429 rate
-                    // limited) is a real failure on our side and must not be shown to riders as
-                    // "no buses due", so let the default handler throw and fail the call.
-                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(),
-                            (request, response) -> { })
-                    .body(JsonNode.class);
+                    .body(byte[].class);
+            if (feed == null) {
+                log.warn("TransLink trip updates feed returned an empty body");
+                return null;
+            }
 
-            return parseArrivals(root);
+            return parseArrivals(FeedMessage.parseFrom(feed), stopIds, clock.instant(),
+                    clock.getZone(), routeCatalog);
         } catch (Exception e) {
             // Riders only ever see "unavailable", so log the cause: a bad key or a hit rate limit
             // is indistinguishable from a TransLink outage otherwise.
-            log.warn("TransLink RTTI call for stop {} failed: {}", stopNo, e.toString());
+            log.warn("TransLink trip updates call for stops {} failed: {}", stopIds, e.toString());
             return null;   // network error / auth / rate limit / 5xx -> API unavailable
         }
     }
 
     /**
-     * Turns a raw RTTI estimates payload into a flat list of upcoming buses.
-     * A successful response is a JSON array of routes, each holding a list of
-     * schedules; anything else (an error object, empty body) yields an empty list.
+     * Picks the departures that serve our stop out of a network-wide trip update feed.
+     * Buses already gone are dropped, the rest are ordered soonest-first.
      */
-    static List<BusArrival> parseArrivals(JsonNode root) {
-        List<BusArrival> arrivals = new ArrayList<>();
-        if (root == null || !root.isArray()) {
-            return arrivals;
+    static List<BusArrival> parseArrivals(FeedMessage feed, Set<String> stopIds, Instant now,
+                                          ZoneId zone, RouteCatalog routeCatalog) {
+        record Departure(Instant when, BusArrival arrival) {
         }
-        for (JsonNode route : root) {
-            String routeNo = route.path("RouteNo").asString("").trim();
-            for (JsonNode schedule : route.path("Schedules")) {
-                arrivals.add(new BusArrival(
-                        routeNo,
-                        schedule.path("Destination").asString("").trim(),
-                        schedule.path("ExpectedCountdown").asInt(0),
-                        schedule.path("ExpectedLeaveTime").asString("").trim()));
+
+        Instant earliest = now.minus(JUST_MISSED);
+        List<Departure> departures = new ArrayList<>();
+
+        for (FeedEntity entity : feed.getEntityList()) {
+            if (!entity.hasTripUpdate()) {
+                continue;
+            }
+            TripUpdate tripUpdate = entity.getTripUpdate();
+            for (TripUpdate.StopTimeUpdate stop : tripUpdate.getStopTimeUpdateList()) {
+                if (!stopIds.contains(stop.getStopId())) {
+                    continue;
+                }
+                Optional<Instant> when = departureTime(stop);
+                if (when.isEmpty() || when.get().isBefore(earliest)) {
+                    continue;   // no predicted time, or the bus has already gone
+                }
+                departures.add(new Departure(when.get(),
+                        toArrival(tripUpdate, when.get(), now, zone, routeCatalog)));
             }
         }
-        return arrivals;
+
+        return departures.stream()
+                .sorted(Comparator.comparing(Departure::when))
+                .limit(MAX_ARRIVALS)
+                .map(Departure::arrival)
+                .toList();
+    }
+
+    /**
+     * When the bus leaves our stop. Departure is what a waiting rider cares about;
+     * arrival is the fallback for the last stop of a trip, which has no departure.
+     */
+    private static Optional<Instant> departureTime(TripUpdate.StopTimeUpdate stop) {
+        if (stop.hasDeparture() && stop.getDeparture().getTime() > 0) {
+            return Optional.of(Instant.ofEpochSecond(stop.getDeparture().getTime()));
+        }
+        if (stop.hasArrival() && stop.getArrival().getTime() > 0) {
+            return Optional.of(Instant.ofEpochSecond(stop.getArrival().getTime()));
+        }
+        return Optional.empty();
+    }
+
+    private static BusArrival toArrival(TripUpdate tripUpdate, Instant when, Instant now,
+                                        ZoneId zone, RouteCatalog routeCatalog) {
+        RouteCatalog.Route route = routeCatalog.find(tripUpdate.getTrip().getRouteId())
+                // An unknown id still beats hiding the bus: show the raw id rather than a blank row.
+                .orElseGet(() -> new RouteCatalog.Route(tripUpdate.getTrip().getRouteId(), ""));
+
+        long minutes = Math.max(0, Duration.between(now, when).toMinutes());
+        String clockTime = CLOCK_TIME.format(when.atZone(zone)).toLowerCase(Locale.ENGLISH);
+
+        return new BusArrival(route.number(), route.name(), (int) minutes, clockTime);
     }
 
     /**

@@ -47,6 +47,7 @@ public class TransitService {
     private final RestClient restClient;
     private final String apiKey;
     private final String stopNo;
+    private final String stopName;
 
     /**
      * Takes the Spring-managed builder rather than {@code RestClient.create()} so the
@@ -57,10 +58,12 @@ public class TransitService {
     public TransitService(
             RestClient.Builder restClientBuilder,
             @Value("${translink.api.key}") String apiKey,
-            @Value("${translink.stop-no}") String stopNo) {
+            @Value("${translink.stop-no}") String stopNo,
+            @Value("${translink.stop-name:}") String stopName) {
         this.restClient = restClientBuilder.build();
         this.apiKey = apiKey;
         this.stopNo = stopNo;
+        this.stopName = stopName;
     }
 
     /**
@@ -76,6 +79,8 @@ public class TransitService {
         boolean alertsAvailable = (alerts != null);
 
         return new TransitInfo(
+                stopNo,
+                stopName,
                 apiAvailable,
                 apiAvailable ? arrivals : List.of(),
                 alertsAvailable,

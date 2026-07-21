@@ -54,6 +54,8 @@ class DashboardTransitViewTest {
     @Test
     void showsUpcomingBusesAndActiveAlerts() throws Exception {
         when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
+                "55555",
+                "Test Exchange Zulu",
                 true,
                 List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
                 true,
@@ -63,13 +65,18 @@ class DashboardTransitViewTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("999")))
                 .andExpect(content().string(containsString("Test Terminal Alpha")))
-                .andExpect(content().string(containsString("7 min")))
+                .andExpect(content().string(containsString("9:07pm")))       // actual arrival time
+                .andExpect(content().string(containsString("in 7 min")))     // countdown
+                .andExpect(content().string(containsString("Test Exchange Zulu")))  // stop name
+                .andExpect(content().string(containsString("Stop #55555")))  // stop number
                 .andExpect(content().string(containsString("Test Alert Bravo")));
     }
 
     @Test
     void showsMessageWhenNoUpcomingBuses() throws Exception {
         when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
+                "61935",
+                "",
                 true,
                 List.of(),
                 true,
@@ -83,6 +90,8 @@ class DashboardTransitViewTest {
     @Test
     void showsMessageWhenNoActiveAlerts() throws Exception {
         when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
+                "61935",
+                "",
                 true,
                 List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
                 true,
@@ -97,6 +106,8 @@ class DashboardTransitViewTest {
     @Test
     void showsErrorWhenAlertsFeedUnavailable() throws Exception {
         when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
+                "61935",
+                "",
                 true,
                 List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
                 false,
@@ -110,7 +121,7 @@ class DashboardTransitViewTest {
 
     @Test
     void showsErrorWhenApiUnavailable() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(false, List.of(), false, List.of()));
+        when(transitService.getTransitInfo()).thenReturn(new TransitInfo("61935", "", false, List.of(), false, List.of()));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())

@@ -46,7 +46,7 @@ public class RidesController extends AuthenticatedController {
 
     // available rides
     @GetMapping("/rides/available")
-        public String available(@RequestParam(name = "q", required = false) String query,
+        public String available(@RequestParam(name = "q", required = false, defaultValue = "") String query,
                         @RequestParam(name = "departure", required = false) String departure,
                         @RequestParam(name = "destination", required = false) String destination,
                         @RequestParam(required = false, defaultValue = "Departure") String sort,

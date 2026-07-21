@@ -35,4 +35,4 @@ build/
 ## Mac files ###
 .DS_Store
 
-/data
+/datanode_modules/

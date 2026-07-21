@@ -190,6 +190,52 @@
 
         </div>
         <div class="rounded-2xl border border-border bg-card p-5 card-lift">
+          <div class="flex items-center gap-2 text-sm font-medium">
+            <svg class="h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6" /><path d="M15 6v6" /><path d="M2 12h19.6" /><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3" /><circle cx="7" cy="18" r="2" /><path d="M9 18h5" /><circle cx="16" cy="18" r="2" /></svg> Live transit
+          </div>
+
+          <!-- The TransLink API is unavailable: show an error, but the rest of the page keeps working. -->
+          <div th:if="${transit == null or !transit.apiAvailable()}"
+               class="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+            Transit information is temporarily unavailable.
+          </div>
+
+          <div th:if="${transit != null and transit.apiAvailable()}">
+            <!-- Upcoming buses -->
+            <div class="mt-3 space-y-2 text-sm">
+              <p th:if="${#lists.isEmpty(transit.arrivals())}" class="text-xs text-muted-foreground">
+                No upcoming transit information available.
+              </p>
+              <div th:each="bus : ${transit.arrivals()}" class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary" th:text="${bus.routeNo()}">144</span>
+                  <span class="text-muted-foreground" th:text="${bus.destination()}">Metrotown Station</span>
+                </div>
+                <span class="text-xs font-semibold text-emerald-700"
+                      th:text="${bus.minutesUntil()} + ' min'">5 min</span>
+              </div>
+            </div>
+
+            <!-- Service alerts -->
+            <div class="mt-4 border-t border-border pt-3">
+              <p class="text-xs font-medium text-muted-foreground">Service alerts</p>
+              <!-- The alerts feed failed on its own: don't claim there are no alerts when we could not check. -->
+              <p th:if="${!transit.alertsAvailable()}" class="mt-1 text-xs text-destructive">
+                Service alerts are temporarily unavailable.
+              </p>
+              <p th:if="${transit.alertsAvailable() and #lists.isEmpty(transit.alerts())}" class="mt-1 text-xs text-muted-foreground">
+                No active service alerts.
+              </p>
+              <div th:each="alert : ${transit.alerts()}"
+                   class="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
+                <p class="font-semibold" th:text="${alert.title()}">Service alert</p>
+                <p th:if="${!#strings.isEmpty(alert.description())}" class="mt-0.5" th:text="${alert.description()}">Details</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-border bg-card p-5 card-lift">
           <h3 class="font-display text-base font-semibold">Your rating</h3>
           <div class="mt-3 flex items-center gap-3">
             <div class="text-3xl font-semibold">4.9</div>

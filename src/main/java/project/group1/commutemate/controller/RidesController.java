@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -44,15 +45,44 @@ public class RidesController extends AuthenticatedController {
 
     // available rides
     @GetMapping("/rides/available")
-    public String available(@RequestParam(name = "q", required = false) String query,
-                            @RequestParam(required = false, defaultValue = "Departure") String sort,
-                            Model model) {
-        model.addAttribute("rides", rideService.search(query, sort));
-        model.addAttribute("query", query == null ? "" : query);
-        model.addAttribute("sort", sort);
-        model.addAttribute("sortOptions", SORT_OPTIONS);
-        return "rides-available";
+        public String available(@RequestParam(name = "q", required = false) String query,
+                        @RequestParam(name = "departure", required = false) String departure,
+                        @RequestParam(name = "destination", required = false) String destination,
+                        @RequestParam(required = false, defaultValue = "Departure") String sort,
+                        Model model) {
+
+                      List<Ride> rides = rideService.search(query, sort);
+
+    if (hasText(departure)) {
+        rides = rides.stream()
+                .filter(ride -> containsIgnoreCase(ride.getFrom(), departure))
+                .toList();
     }
+
+    if (hasText(destination)) {
+        rides = rides.stream()
+                .filter(ride -> containsIgnoreCase(ride.getTo(), destination))
+                .toList();
+    }
+
+    model.addAttribute("rides", rides);
+    model.addAttribute("query", query == null ? "" : query);
+    model.addAttribute("departure", departure == null ? "" : departure);
+    model.addAttribute("destination", destination == null ? "" : destination);
+    model.addAttribute("sort", sort);
+    model.addAttribute("sortOptions", SORT_OPTIONS);
+    return "rides-available";
+}
+        private boolean hasText(String value) {
+    return value != null && !value.isBlank();
+}
+
+    private boolean containsIgnoreCase(String text, String search) {
+    if (text == null || search == null) {
+        return false;
+    }
+    return text.toLowerCase().contains(search.toLowerCase());
+}
 
     //  ride details
     @GetMapping("/rides/{rideId}")

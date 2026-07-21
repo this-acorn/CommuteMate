@@ -8,9 +8,14 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import java.time.Clock;
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +30,7 @@ import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Role;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
+import project.group1.commutemate.model.Ride;
 
 @WebMvcTest(controllers = {RideRequestController.class, RidesController.class})
 @AutoConfigureMockMvc(addFilters = false)
@@ -53,7 +59,7 @@ class RideAuthorizationControllerTest {
     @BeforeEach
     void setUp() {
         signedInProfile = new Profile(
-                SIGNED_IN_EMAIL, "Signed In Member", Role.BOTH, 0, 0);
+                SIGNED_IN_EMAIL, "Signed In Member", Role.RIDER, 0, 0);
         when(currentUserService.currentProfile()).thenReturn(Optional.of(signedInProfile));
     }
 
@@ -100,4 +106,56 @@ class RideAuthorizationControllerTest {
         assertEquals(SIGNED_IN_EMAIL, signedInProfile.getEmail());
         verify(coordinationService).deleteOwnedRide(eq(44L), same(signedInProfile));
     }
+        @Test
+        void availableRidesAppliesDepartureAndDestinationFilters() throws Exception {
+         Ride metrotownRide = new Ride(
+            "driver@sfu.ca",
+            "Demo Driver",
+            "DD",
+            "Metrotown Station",
+            "SFU Burnaby — AQ",
+            LocalDateTime.now().plusHours(1),
+            3,
+            0,
+            4,
+            25,
+            79,
+            "Test Car",
+            5.0,
+            null
+         );
+
+         Ride coquitlamRide = new Ride(
+            "driver2@sfu.ca",
+            "Other Driver",
+            "OD",
+            "Coquitlam Central",
+            "SFU Burnaby — Convocation Mall",
+            LocalDateTime.now().plusHours(1),
+            3,
+            0,
+            4,
+            35,
+            68,
+            "Test Car",
+            4.7,
+            null
+          );
+
+         when(rideService.search("", "Departure"))
+            .thenReturn(List.of(metrotownRide, coquitlamRide));
+
+         mockMvc.perform(get("/rides/available")
+                    .param("departure", "Metrotown")
+                    .param("destination", "SFU"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("rides-available"))
+            .andExpect(model().attribute("departure", "Metrotown"))
+            .andExpect(model().attribute("destination", "SFU"))
+            .andExpect(model().attribute("sort", "Departure"))
+            .andExpect(model().attribute("rides", List.of(metrotownRide)));
+
+          verify(rideService).search("", "Departure");
+}
+
 }

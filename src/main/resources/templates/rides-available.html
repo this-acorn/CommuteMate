@@ -24,22 +24,69 @@
 
     <!-- Search + sort toolbar. Works without JS by submitting to the server. -->
     <form method="get" th:action="@{/rides/available}"
-          class="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3 card-lift">
-      <div class="relative flex-1 min-w-[240px]">
-        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg>
-        <input type="text" name="q" th:value="${query}" data-rides-search="data-rides-search"
-               placeholder="Search by pickup, destination, or driver"
-               class="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+      class="mt-8 rounded-2xl border border-border bg-card p-3 card-lift">
+
+     <div class="grid gap-3 md:grid-cols-3">
+    <div class="relative">
+      <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+           xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m21 21-4.34-4.34" />
+        <circle cx="11" cy="11" r="8" />
+         </svg>
+
+         <input type="text" name="q" th:value="${query}" data-rides-search="data-rides-search"
+             placeholder="Search by pickup, destination, or driver"
+             class="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+          </div>
+
+       <div>
+      <input type="text" name="departure" th:value="${departure}"
+             placeholder="Departure, e.g. Metrotown"
+             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+        </div>
+
+        <div>
+      <input type="text" name="destination" th:value="${destination}"
+             placeholder="Destination, e.g. SFU"
+             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+       </div>
       </div>
-      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" /></svg> Sort by
+
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+       <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round">
+          <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+       </svg>
+      Sort by
       </div>
-      <div class="flex flex-wrap gap-1.5">
-        <button type="submit" class="rounded-full px-3 py-1.5 text-xs font-medium transition-colors" name="sort"
-                th:each="s : ${sortOptions}" th:value="${s}" th:text="${s}" th:attr="data-sort=${s}"
-                th:classappend="${sort == s} ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/70'">Departure</button>
-      </div>
-    </form>
+
+    <div class="flex flex-wrap gap-1.5">
+      <button type="submit"
+              class="rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+              name="sort"
+              th:each="s : ${sortOptions}"
+              th:value="${s}"
+              th:text="${s}"
+              th:attr="data-sort=${s}"
+              th:classappend="${sort == s} ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/70'">
+        Departure
+      </button>
+    </div>
+
+    <button type="submit"
+            class="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+      Apply filters
+    </button>
+
+    <a th:href="@{/rides/available}"
+       class="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium transition-colors hover:bg-secondary/70">
+      Clear filters
+    </a>
+  </div>
+</form>
 
     <div class="mt-6 grid gap-4 md:grid-cols-2" data-rides-grid="data-rides-grid">
       <article th:each="r : ${rides}" class="rounded-2xl border border-border bg-card p-5 card-lift hover:card-lift-hover"

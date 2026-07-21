@@ -147,7 +147,11 @@ public class TransitService {
     /**
      * Picks the departures serving our campuses out of a network-wide trip update feed.
      * Buses already gone are dropped, the rest are ordered soonest-first within each campus.
-     * Campuses with nothing due are left out entirely rather than shown as empty headings.
+     *
+     * <p>Every campus is returned even with nothing due, because dropping one makes the card
+     * look broken: SFU Burnaby is a terminus served by a handful of routes, so between buses
+     * the feed genuinely has nothing for it, and a rider should see "none due" rather than
+     * watch their campus disappear.</p>
      */
     static Departures parseDepartures(FeedMessage feed, Instant now, ZoneId zone,
                                       RouteCatalog routeCatalog) {
@@ -184,10 +188,7 @@ public class TransitService {
 
         List<CampusDepartures> campuses = new ArrayList<>();
         for (TransitStops.Campus campus : TransitStops.CAMPUSES) {   // keep the configured order
-            List<Departure> found = byCampus.get(campus.name());
-            if (found == null || found.isEmpty()) {
-                continue;
-            }
+            List<Departure> found = byCampus.getOrDefault(campus.name(), List.of());
             campuses.add(new CampusDepartures(campus.name(), found.stream()
                     .sorted(Comparator.comparing(Departure::when))
                     .limit(MAX_ARRIVALS_PER_CAMPUS)

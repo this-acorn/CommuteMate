@@ -80,14 +80,20 @@ class TransitServiceTest {
 
     // --- departures ---
 
+    /** Campus lookup by name, so tests do not depend on list positions. */
+    private static CampusDepartures campus(List<CampusDepartures> campuses, String name) {
+        return campuses.stream()
+                .filter(entry -> entry.campus().equals(name))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no campus named " + name));
+    }
+
     @Test
     void mapsRouteIdToTheNumberAndNameRidersKnow() {
         // 6657 is route 144 in the static GTFS catalog we ship.
         List<CampusDepartures> campuses = campuses(feedOf(departure("6657", BURNABY_BAY_1, 45)));
 
-        assertEquals(1, campuses.size());
-        assertEquals("SFU Burnaby", campuses.get(0).campus());
-        BusArrival bus = campuses.get(0).arrivals().get(0);
+        BusArrival bus = campus(campuses, "SFU Burnaby").arrivals().get(0);
         assertEquals("144", bus.routeNo());
         assertEquals("SFU Exchange/Metrotown Station", bus.destination());
         assertEquals(45, bus.minutesUntil());
@@ -105,28 +111,35 @@ class TransitServiceTest {
                 campuses.stream().map(CampusDepartures::campus).toList());
     }
 
-    /** An empty campus heading tells a rider nothing, so campuses with no buses are left out. */
+    /**
+     * A campus that drops off the card looks broken, and SFU Burnaby is a terminus that
+     * genuinely runs dry between buses — so every campus is always listed.
+     */
     @Test
-    void leavesOutCampusesWithNothingDue() {
+    void listsEveryCampusEvenWhenNothingIsDueThere() {
         List<CampusDepartures> campuses = campuses(feedOf(departure("6657", SURREY_BAY_2, 12)));
 
-        assertEquals(1, campuses.size());
-        assertEquals("SFU Surrey", campuses.get(0).campus());
+        assertEquals(List.of("SFU Burnaby", "SFU Surrey", "SFU Vancouver"),
+                campuses.stream().map(CampusDepartures::campus).toList());
+        assertTrue(campus(campuses, "SFU Burnaby").arrivals().isEmpty());
+        assertEquals(1, campus(campuses, "SFU Surrey").arrivals().size());
     }
 
     @Test
     void ignoresDeparturesFromStopsWeDoNotWatch() {
-        assertTrue(campuses(feedOf(departure("6657", "99999", 10))).isEmpty());
+        List<CampusDepartures> campuses = campuses(feedOf(departure("6657", "99999", 10)));
+
+        assertTrue(campuses.stream().allMatch(entry -> entry.arrivals().isEmpty()));
     }
 
     @Test
     void dropsBusesThatHaveAlreadyGone() {
-        List<CampusDepartures> campuses = campuses(feedOf(
+        List<BusArrival> burnaby = campus(campuses(feedOf(
                 departure("6657", BURNABY_BAY_1, -10),   // left ten minutes ago
-                departure("6658", BURNABY_BAY_1, 12)));
+                departure("6658", BURNABY_BAY_1, 12))), "SFU Burnaby").arrivals();
 
-        assertEquals(1, campuses.get(0).arrivals().size());
-        assertEquals("145", campuses.get(0).arrivals().get(0).routeNo());
+        assertEquals(1, burnaby.size());
+        assertEquals("145", burnaby.get(0).routeNo());
     }
 
     /** A bus at the stop right now should read as due, not as a negative countdown. */
@@ -134,7 +147,7 @@ class TransitServiceTest {
     void reportsABusDueRightNowAsZeroMinutes() {
         List<CampusDepartures> campuses = campuses(feedOf(departure("6657", BURNABY_BAY_1, 0)));
 
-        assertEquals(0, campuses.get(0).arrivals().get(0).minutesUntil());
+        assertEquals(0, campus(campuses, "SFU Burnaby").arrivals().get(0).minutesUntil());
     }
 
     @Test
@@ -147,7 +160,8 @@ class TransitServiceTest {
                 departure("6658", BURNABY_BAY_1, 20)));
 
         assertEquals(List.of(5, 20, 30),
-                campuses.get(0).arrivals().stream().map(BusArrival::minutesUntil).toList());
+                campus(campuses, "SFU Burnaby").arrivals().stream()
+                        .map(BusArrival::minutesUntil).toList());
     }
 
     /** The last stop of a trip has an arrival but no departure; the bus still matters. */
@@ -163,7 +177,8 @@ class TransitServiceTest {
                         .build())
                 .build();
 
-        assertEquals(15, campuses(feedOf(arrivalOnly)).get(0).arrivals().get(0).minutesUntil());
+        assertEquals(15, campus(campuses(feedOf(arrivalOnly)), "SFU Burnaby")
+                .arrivals().get(0).minutesUntil());
     }
 
     /** A stop update with no predicted time at all tells us nothing, so skip it. */
@@ -174,7 +189,7 @@ class TransitServiceTest {
                 .addStopTimeUpdate(StopTimeUpdate.newBuilder().setStopId(BURNABY_BAY_1).build())
                 .build();
 
-        assertTrue(campuses(feedOf(noTime)).isEmpty());
+        assertTrue(campus(campuses(feedOf(noTime)), "SFU Burnaby").arrivals().isEmpty());
     }
 
     /** A route missing from the catalog must not hide the bus. */
@@ -182,12 +197,12 @@ class TransitServiceTest {
     void fallsBackToTheRawRouteIdWhenTheCatalogHasNoEntry() {
         List<CampusDepartures> campuses = campuses(feedOf(departure("no-such-route", BURNABY_BAY_1, 7)));
 
-        assertEquals("no-such-route", campuses.get(0).arrivals().get(0).routeNo());
+        assertEquals("no-such-route", campus(campuses, "SFU Burnaby").arrivals().get(0).routeNo());
     }
 
     @Test
-    void treatsAFeedWithNoTripUpdatesAsNoBusesDue() {
-        assertTrue(campuses(feedOf()).isEmpty());
+    void treatsAFeedWithNoTripUpdatesAsNoBusesDueAnywhere() {
+        assertTrue(campuses(feedOf()).stream().allMatch(entry -> entry.arrivals().isEmpty()));
     }
 
     /** Alert relevance keys off routes, so every route touching our stops has to be collected. */

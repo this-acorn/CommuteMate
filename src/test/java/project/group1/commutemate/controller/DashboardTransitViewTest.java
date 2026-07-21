@@ -95,15 +95,25 @@ class DashboardTransitViewTest {
                 .andExpect(content().string(containsString("Test Terminal Delta")));
     }
 
+    /**
+     * A campus with nothing due keeps its heading and says so — dropping it made the
+     * card look broken when SFU Burnaby ran dry between buses.
+     */
     @Test
-    void showsMessageWhenNoUpcomingBuses() throws Exception {
-        when(transitService.getTransitInfo())
-                .thenReturn(new TransitInfo(true, List.of(), true, TEST_ALERT));
+    void keepsACampusHeadingWhenNoBusesAreDueThere() throws Exception {
+        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
+                true,
+                List.of(new CampusDepartures("Test Campus Yankee", List.of()),
+                        new CampusDepartures("Test Campus Xray", List.of(TEST_BUS))),
+                true,
+                TEST_ALERT));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(
-                        containsString("No buses are due at the campus stops right now.")));
+                .andExpect(content().string(containsString("Test Campus Yankee")))
+                .andExpect(content().string(containsString("No buses due right now.")))
+                .andExpect(content().string(containsString("Test Campus Xray")))
+                .andExpect(content().string(containsString("999")));
     }
 
     @Test

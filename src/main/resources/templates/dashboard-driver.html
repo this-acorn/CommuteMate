@@ -206,6 +206,11 @@
             </p>
             <div th:each="campus, iter : ${transit.campuses()}" th:classappend="${iter.first} ? '' : 'mt-3'">
               <p class="text-xs font-medium text-muted-foreground" th:text="${campus.campus()}">SFU Burnaby</p>
+              <!-- A terminus can genuinely have nothing running between buses; say so rather
+                   than dropping the campus, which reads as the card being broken. -->
+              <p th:if="${#lists.isEmpty(campus.arrivals())}" class="mt-1 text-xs text-muted-foreground">
+                No buses due right now.
+              </p>
               <div class="mt-1 space-y-2">
                 <div th:each="bus : ${campus.arrivals()}" class="flex items-center justify-between">
                   <div class="flex items-center gap-2">

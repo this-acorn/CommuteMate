@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import project.group1.commutemate.User.CurrentUserService;
 import project.group1.commutemate.model.BusArrival;
+import project.group1.commutemate.model.CampusDepartures;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Role;
 import project.group1.commutemate.model.ServiceAlert;
@@ -45,6 +46,15 @@ class DashboardTransitViewTest {
     @MockitoBean
     private CurrentUserService currentUserService;
 
+    private static final BusArrival TEST_BUS =
+            new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm");
+
+    private static final List<CampusDepartures> TEST_CAMPUS =
+            List.of(new CampusDepartures("Test Campus Yankee", List.of(TEST_BUS)));
+
+    private static final List<ServiceAlert> TEST_ALERT =
+            List.of(new ServiceAlert("Test Alert Bravo", "Detour in effect"));
+
     @BeforeEach
     void signInAsRider() {
         when(currentUserService.currentProfile())
@@ -53,71 +63,75 @@ class DashboardTransitViewTest {
 
     @Test
     void showsUpcomingBusesAndActiveAlerts() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
-                "Test Exchange Zulu",
-                true,
-                List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
-                true,
-                List.of(new ServiceAlert("Test Alert Bravo", "Detour in effect"))));
+        when(transitService.getTransitInfo())
+                .thenReturn(new TransitInfo(true, TEST_CAMPUS, true, TEST_ALERT));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("999")))
                 .andExpect(content().string(containsString("Test Terminal Alpha")))
-                .andExpect(content().string(containsString("9:07pm")))       // actual departure time
-                .andExpect(content().string(containsString("in 7 min")))     // countdown
-                .andExpect(content().string(containsString("Test Exchange Zulu")))  // stop it leaves from
+                .andExpect(content().string(containsString("9:07pm")))     // actual departure time
+                .andExpect(content().string(containsString("in 7 min")))   // countdown
+                .andExpect(content().string(containsString("Test Campus Yankee")))   // campus heading
                 .andExpect(content().string(containsString("Test Alert Bravo")));
+    }
+
+    /** Buses are grouped under the campus they leave from, so every campus is labelled. */
+    @Test
+    void groupsBusesUnderEachCampus() throws Exception {
+        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
+                true,
+                List.of(new CampusDepartures("Test Campus Yankee", List.of(TEST_BUS)),
+                        new CampusDepartures("Test Campus Xray",
+                                List.of(new BusArrival("888", "Test Terminal Delta", 3, "9:03pm")))),
+                true,
+                List.of()));
+
+        mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Test Campus Yankee")))
+                .andExpect(content().string(containsString("Test Campus Xray")))
+                .andExpect(content().string(containsString("888")))
+                .andExpect(content().string(containsString("Test Terminal Delta")));
     }
 
     @Test
     void showsMessageWhenNoUpcomingBuses() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
-                "Test Exchange Zulu",
-                true,
-                List.of(),
-                true,
-                List.of(new ServiceAlert("Test Alert Bravo", "Detour in effect"))));
+        when(transitService.getTransitInfo())
+                .thenReturn(new TransitInfo(true, List.of(), true, TEST_ALERT));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("No upcoming transit information available.")));
+                .andExpect(content().string(
+                        containsString("No buses are due at the campus stops right now.")));
     }
 
     @Test
-    void showsMessageWhenNoActiveAlerts() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
-                "Test Exchange Zulu",
-                true,
-                List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
-                true,
-                List.of()));
+    void showsMessageWhenNoRelevantAlerts() throws Exception {
+        when(transitService.getTransitInfo())
+                .thenReturn(new TransitInfo(true, TEST_CAMPUS, true, List.of()));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("No active service alerts.")));
+                .andExpect(content().string(containsString("No alerts affecting these routes.")));
     }
 
-    /** A failed alerts feed must not be reported as "no active alerts". */
+    /** A failed alerts feed must not be reported as "no alerts". */
     @Test
     void showsErrorWhenAlertsFeedUnavailable() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
-                "Test Exchange Zulu",
-                true,
-                List.of(new BusArrival("999", "Test Terminal Alpha", 7, "9:07pm")),
-                false,
-                List.of()));
+        when(transitService.getTransitInfo())
+                .thenReturn(new TransitInfo(true, TEST_CAMPUS, false, List.of()));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Service alerts are temporarily unavailable.")))
-                .andExpect(content().string(not(containsString("No active service alerts."))));
+                .andExpect(content().string(not(containsString("No alerts affecting these routes."))));
     }
 
     @Test
     void showsErrorWhenApiUnavailable() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(
-                new TransitInfo("Test Exchange Zulu", false, List.of(), false, List.of()));
+        when(transitService.getTransitInfo())
+                .thenReturn(new TransitInfo(false, List.of(), false, List.of()));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())
@@ -131,12 +145,8 @@ class DashboardTransitViewTest {
      */
     @Test
     void stillShowsAlertsWhenDeparturesAreUnavailable() throws Exception {
-        when(transitService.getTransitInfo()).thenReturn(new TransitInfo(
-                "Test Exchange Zulu",
-                false,
-                List.of(),
-                true,
-                List.of(new ServiceAlert("Test Alert Bravo", "Detour in effect"))));
+        when(transitService.getTransitInfo())
+                .thenReturn(new TransitInfo(false, List.of(), true, TEST_ALERT));
 
         mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
                 .andExpect(status().isOk())

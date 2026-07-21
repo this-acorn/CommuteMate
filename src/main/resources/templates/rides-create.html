@@ -28,16 +28,36 @@
             <label for="from" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Pickup</label>
             <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" /></svg>
-              <input id="from" name="from" value="Metrotown Station" required="required"
-                     class="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+              <select id="from" name="from" required="required"
+                      class="flex h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent pl-9 pr-9 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
+                <optgroup label="Transit hubs &amp; neighbourhoods">
+                  <option th:each="stop : ${communityStops}" th:value="${stop}" th:text="${stop}"
+                          th:selected="${stop == defaultPickup}"></option>
+                </optgroup>
+                <optgroup label="SFU Burnaby campus">
+                  <option th:each="stop : ${campusStops}" th:value="${stop}" th:text="${stop}"
+                          th:selected="${stop == defaultPickup}"></option>
+                </optgroup>
+              </select>
+              <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
           <div class="space-y-1.5 sm:col-span-2">
             <label for="to" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Destination</label>
             <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" /></svg>
-              <input id="to" name="to" value="SFU Burnaby — AQ" required="required"
-                     class="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+              <select id="to" name="to" required="required"
+                      class="flex h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent pl-9 pr-9 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
+                <optgroup label="SFU Burnaby campus">
+                  <option th:each="stop : ${campusStops}" th:value="${stop}" th:text="${stop}"
+                          th:selected="${stop == defaultDestination}"></option>
+                </optgroup>
+                <optgroup label="Transit hubs &amp; neighbourhoods">
+                  <option th:each="stop : ${communityStops}" th:value="${stop}" th:text="${stop}"
+                          th:selected="${stop == defaultDestination}"></option>
+                </optgroup>
+              </select>
+              <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
           <div class="space-y-1.5">

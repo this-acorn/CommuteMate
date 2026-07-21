@@ -177,7 +177,9 @@
     }
 
     Object.keys(els).forEach(function (k) {
-      if (els[k]) els[k].addEventListener("input", update);
+      if (!els[k]) return;
+      els[k].addEventListener("input", update);
+      els[k].addEventListener("change", update);
     });
     update();
   }

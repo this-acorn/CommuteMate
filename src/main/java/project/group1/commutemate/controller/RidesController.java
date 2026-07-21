@@ -20,6 +20,7 @@ import project.group1.commutemate.exception.RideOperationException;
 import project.group1.commutemate.model.LocationCoordinates;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Ride;
+import project.group1.commutemate.model.RideLocations;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 
@@ -117,6 +118,10 @@ public class RidesController extends AuthenticatedController {
     @GetMapping("/rides/create")
     public String createForm(Model model) {
         model.addAttribute("minimumDate", LocalDate.now(clock).toString());
+        model.addAttribute("communityStops", RideLocations.COMMUNITY_STOPS);
+        model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
+        model.addAttribute("defaultPickup", RideLocations.DEFAULT_PICKUP);
+        model.addAttribute("defaultDestination", RideLocations.DEFAULT_DESTINATION);
         return "rides-create";
     }
 

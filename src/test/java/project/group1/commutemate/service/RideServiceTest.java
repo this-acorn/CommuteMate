@@ -41,7 +41,8 @@ class RideServiceTest {
     void createStoresAuthenticatedEmailAsOwner() {
         when(rideRepository.save(any(Ride.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Ride created = service.create("DRIVER@SFU.CA", "Demo Driver", "Metrotown", "SFU",
+        Ride created = service.create("DRIVER@SFU.CA", "Demo Driver",
+                "Metrotown Station", "SFU Residence",
                 LocalDateTime.now(CLOCK).plusDays(1), 3, 4, "Meet outside");
 
         assertEquals("driver@sfu.ca", created.getDriverEmail());
@@ -52,9 +53,29 @@ class RideServiceTest {
     @Test
     void createRejectsPastDeparture() {
         RideOperationException error = assertThrows(RideOperationException.class,
-                () -> service.create("driver@sfu.ca", "Demo Driver", "Metrotown", "SFU",
+                () -> service.create("driver@sfu.ca", "Demo Driver",
+                        "Metrotown Station", "SFU Residence",
                         LocalDateTime.now(CLOCK).minusMinutes(1), 3, 4, null));
 
         assertEquals("Departure must be in the future.", error.getMessage());
+    }
+
+    @Test
+    void createRejectsStopsOutsideTheSelectableList() {
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.create("driver@sfu.ca", "Demo Driver", "My House", "SFU Residence",
+                        LocalDateTime.now(CLOCK).plusDays(1), 3, 4, null));
+
+        assertEquals("Choose a pickup and destination from the list.", error.getMessage());
+    }
+
+    @Test
+    void createRejectsIdenticalPickupAndDestination() {
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.create("driver@sfu.ca", "Demo Driver",
+                        "SFU Residence", "SFU Residence",
+                        LocalDateTime.now(CLOCK).plusDays(1), 3, 4, null));
+
+        assertEquals("Pickup and destination must be different.", error.getMessage());
     }
 }

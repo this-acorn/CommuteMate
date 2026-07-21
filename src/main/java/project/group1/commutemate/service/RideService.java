@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import project.group1.commutemate.exception.RideOperationException;
 import project.group1.commutemate.model.Ride;
+import project.group1.commutemate.model.RideLocations;
 import project.group1.commutemate.repository.RideRepository;
 
 /** Ride creation, lookup, search, and ownership. */
@@ -73,12 +74,14 @@ public class RideService {
     public Ride create(String driverEmail, String driverName, String from, String to,
                        LocalDateTime departAt, int seats, int price, String notes) {
         validateOwner(driverEmail, driverName);
-        validateCreate(from, to, departAt, seats, price);
+        String pickup = RideLocations.canonical(from);
+        String destination = RideLocations.canonical(to);
+        validateCreate(pickup, destination, departAt, seats, price);
 
         int points = seats * 8 + 5;
         int ecoScore = Math.min(95, 55 + seats * 8);
         Ride ride = new Ride(normalizeEmail(driverEmail), driverName.trim(), initialsOf(driverName),
-                from.trim(), to.trim(), departAt, seats, 0, price, points, ecoScore,
+                pickup, destination, departAt, seats, 0, price, points, ecoScore,
                 "Your vehicle", 5.0, blankToNull(notes));
         return rideRepository.save(ride);
     }
@@ -91,9 +94,13 @@ public class RideService {
         }
     }
 
+    // from/to are already canonical here: null means the value was missing or off the list
     private void validateCreate(String from, String to, LocalDateTime departAt, int seats, int price) {
-        if (from == null || from.isBlank() || to == null || to.isBlank()) {
-            throw new RideOperationException("Pickup and destination are required.");
+        if (from == null || to == null) {
+            throw new RideOperationException("Choose a pickup and destination from the list.");
+        }
+        if (from.equalsIgnoreCase(to)) {
+            throw new RideOperationException("Pickup and destination must be different.");
         }
         if (departAt == null || !departAt.isAfter(now())) {
             throw new RideOperationException("Departure must be in the future.");

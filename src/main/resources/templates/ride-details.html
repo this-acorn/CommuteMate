@@ -37,6 +37,21 @@
             <p class="text-xs font-medium text-muted-foreground">Destination</p>
             <p class="mt-1 text-lg font-semibold" th:text="${ride.to}">SFU Burnaby</p>
           </div>
+
+          <!-- Epic 3: interactive map. Only rendered when both endpoints
+               match a known location; otherwise falls back to a short note
+               so the rest of the page is unaffected. -->
+          <div th:if="${pickupCoords != null and destinationCoords != null}">
+            <p class="text-xs font-medium text-muted-foreground">Route</p>
+            <div id="ride-map" class="mt-1 h-56 w-full rounded-lg border border-border"
+                 th:attr="data-pickup-lat=${pickupCoords.lat()}, data-pickup-lng=${pickupCoords.lng()},
+                          data-destination-lat=${destinationCoords.lat()}, data-destination-lng=${destinationCoords.lng()}">
+            </div>
+          </div>
+          <p th:if="${pickupCoords == null or destinationCoords == null}"
+             class="text-xs text-muted-foreground">
+            Interactive map unavailable for this route — one or both locations aren't recognized yet.
+          </p>
           <div class="grid gap-3 sm:grid-cols-3">
             <div class="rounded-lg bg-secondary/60 p-3">
               <p class="text-xs text-muted-foreground">Departure</p>
@@ -88,5 +103,32 @@
     </div>
   </main>
 </div>
+
+<!-- Epic 3: interactive map (Leaflet + OpenStreetMap tiles — no API key required) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script th:inline="javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    var mapEl = document.getElementById("ride-map");
+    if (!mapEl || typeof L === "undefined") {
+      return; // no route to plot, or Leaflet failed to load — page still works fine without it
+    }
+
+    var pickup = [parseFloat(mapEl.dataset.pickupLat), parseFloat(mapEl.dataset.pickupLng)];
+    var destination = [parseFloat(mapEl.dataset.destinationLat), parseFloat(mapEl.dataset.destinationLng)];
+
+    var map = L.map(mapEl).fitBounds([pickup, destination], { padding: [30, 30] });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 18
+    }).addTo(map);
+
+    L.marker(pickup).addTo(map).bindPopup("Pickup");
+    L.marker(destination).addTo(map).bindPopup("Destination");
+    L.polyline([pickup, destination], { color: "#2563eb", weight: 3, dashArray: "6 6" }).addTo(map);
+  });
+</script>
 </body>
 </html>

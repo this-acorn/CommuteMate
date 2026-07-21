@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import project.group1.commutemate.User.CurrentUserService;
 import project.group1.commutemate.exception.RideOperationException;
+import project.group1.commutemate.model.LocationCoordinates;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.service.RideCoordinationService;
@@ -67,6 +68,14 @@ public class RidesController extends AuthenticatedController {
             model.addAttribute("owner", ride.getDriverEmail().equalsIgnoreCase(profile.getEmail()));
             model.addAttribute("upcoming",
                     ride.getDepartAt() != null && ride.getDepartAt().isAfter(LocalDateTime.now(clock)));
+
+            // Epic 3: interactive map — plot pins when both endpoints match a
+            // known SFU-area location. Missing/unmatched locations simply
+            // don't get a map (handled in the template), the rest of the
+            // page is unaffected.
+            LocationCoordinates.lookup(ride.getFrom()).ifPresent(coords -> model.addAttribute("pickupCoords", coords));
+            LocationCoordinates.lookup(ride.getTo()).ifPresent(coords -> model.addAttribute("destinationCoords", coords));
+
             return "ride-details";
         } catch (RideOperationException ex) {
             redirect.addFlashAttribute("errorMessage", ex.getMessage());

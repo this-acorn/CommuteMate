@@ -76,6 +76,10 @@ public class Ride {
             cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RideRequest> requests = new ArrayList<>();
 
+    @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RideMessage> messages = new ArrayList<>();
+
     public Ride() {
     }
 
@@ -266,5 +270,9 @@ public class Ride {
 
     public List<RideRequest> getRequests() {
         return requests;
+    }
+
+    public List<RideMessage> getMessages() {
+        return messages;
     }
 }

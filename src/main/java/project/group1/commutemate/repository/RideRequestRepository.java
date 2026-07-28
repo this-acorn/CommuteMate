@@ -11,12 +11,17 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.RideRequest;
 
 public interface RideRequestRepository extends JpaRepository<RideRequest, Long> {
 
     // Finds a ride request by the ride id and rider email, ignoring case
     Optional<RideRequest> findByRideIdAndRiderEmailIgnoreCase(Long rideId, String riderEmail);
+
+    // Checks whether a rider has a request with the required status for this ride
+    boolean existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
+            Long rideId, String riderEmail, RequestStatus status);
 
     // Finds all ride requests for a specific rider ordered by the last updated time 
     @EntityGraph(attributePaths = "ride")

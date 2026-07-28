@@ -70,6 +70,10 @@ public class SecurityConfig {
                         .hasAnyRole("RIDER", "BOTH")
                 .requestMatchers(HttpMethod.POST, "/rides/*/delete")
                         .hasAnyRole("DRIVER", "BOTH")
+                .requestMatchers("/rides/*/chat")
+                        .authenticated()
+                .requestMatchers(HttpMethod.POST, "/rides/*/chat/messages")
+                        .authenticated()
                 // Rider features
                 .requestMatchers("/dashboard/rider", "/rides/available")
                         .hasAnyRole("RIDER", "BOTH")

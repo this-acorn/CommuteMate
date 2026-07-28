@@ -53,6 +53,9 @@
           <p class="mt-3 text-sm text-muted-foreground" th:text="'Driver: ' + ${request.ride.driver}">Driver: Demo Driver</p>
           <div class="mt-4 flex items-center gap-2">
             <a th:href="@{/rides/{id}(id=${request.ride.id})}" class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">View ride</a>
+            <a th:if="${request.status.name() == 'CONFIRMED'}"
+               th:href="@{/rides/{id}/chat(id=${request.ride.id})}"
+               class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">Ride chat</a>
             <form th:if="${(request.status.name() == 'PENDING' or request.status.name() == 'CONFIRMED') and request.ride.departAt.isAfter(now)}" method="post" th:action="@{/ride-requests/{id}/cancel(id=${request.id})}">
               <button type="submit" class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">Cancel request</button>
             </form>
@@ -87,6 +90,7 @@
               </div>
             </div>
             <div class="flex gap-2">
+              <a th:href="@{/rides/{id}/chat(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm border border-input bg-background shadow-sm hover:bg-accent h-9 px-4 py-2">Ride chat</a>
               <a th:href="@{/rides/{id}(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">View trip</a>
             </div>
           </div>

@@ -15,7 +15,7 @@
     <div class="card-lift rounded-2xl border border-border bg-card p-8">
       <form method="post" th:action="${mode == 'signup'} ? @{/register} : @{/login}" data-auth-form="data-auth-form">
         <input type="hidden" name="mode" th:value="${mode}" />
-        <input type="hidden" name="role" value="both" />
+        <input type="hidden" name="role" value="rider" />
 
         <div class="mb-6 grid grid-cols-2 rounded-lg bg-secondary p-1">
           <button type="button" data-mode="login" class="rounded-md px-3 py-2 text-sm font-medium transition-colors"
@@ -50,13 +50,12 @@
 
           <div class="space-y-1.5" data-signup-only="data-signup-only" style="display:none;">
             <span class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">I want to</span>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-2 gap-2">
               <button type="button" data-role="driver"
                       class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors border-border bg-background hover:bg-secondary">driver</button>
               <button type="button" data-role="rider"
                       class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors border-border bg-background hover:bg-secondary">rider</button>
-              <button type="button" data-role="both"
-                      class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors border-primary bg-primary/10 text-primary">Both</button>
+              
             </div>
           </div>
 

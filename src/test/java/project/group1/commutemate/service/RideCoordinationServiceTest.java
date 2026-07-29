@@ -86,7 +86,7 @@ class RideCoordinationServiceTest {
 
     @Test
     void requestSeatRejectsRideOwner() {
-        Profile owner = new Profile("driver@sfu.ca", "Demo Driver", Role.BOTH, 0, 0);
+        Profile owner = new Profile("driver@sfu.ca", "Demo Driver", Role.RIDER, 0, 0);
         when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
 
         RideOperationException error = assertThrows(RideOperationException.class,

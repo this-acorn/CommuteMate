@@ -18,9 +18,9 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    @NotBlank(message = "Please select whether you are a rider, driver, or both")
-    @Pattern(regexp = "(?i)rider|driver|both",
-             message = "Role must be rider, driver, or both")
+    @NotBlank(message = "Please select whether you are a rider or driver")
+    @Pattern(regexp = "(?i)rider|driver",
+             message = "Role must be rider or driver")
     private String role;
 
     public String getFullName() {

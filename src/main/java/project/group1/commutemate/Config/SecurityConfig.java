@@ -59,24 +59,24 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/auth", "/register", "/login",
                         "/css/**", "/js/**", "/images/**", "/error").permitAll()
-                // Driver features: BOTH members qualify too
+                // Driver features
                 .requestMatchers("/dashboard/driver", "/rides/create")
-                        .hasAnyRole("DRIVER", "BOTH")
+                        .hasRole("DRIVER")
                 .requestMatchers(HttpMethod.POST, "/rides/*/requests")
-                        .hasAnyRole("RIDER", "BOTH")
+                        .hasRole("RIDER")
                 .requestMatchers(HttpMethod.POST, "/ride-requests/*/confirm", "/ride-requests/*/reject")
-                        .hasAnyRole("DRIVER", "BOTH")
+                        .hasRole("DRIVER")
                 .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
-                        .hasAnyRole("RIDER", "BOTH")
+                        .hasRole("RIDER")
                 .requestMatchers(HttpMethod.POST, "/rides/*/delete")
-                        .hasAnyRole("DRIVER", "BOTH")
+                        .hasRole("DRIVER")
                 .requestMatchers("/rides/*/chat")
                         .authenticated()
                 .requestMatchers(HttpMethod.POST, "/rides/*/chat/messages")
                         .authenticated()
                 // Rider features
                 .requestMatchers("/dashboard/rider", "/rides/available")
-                        .hasAnyRole("RIDER", "BOTH")
+                        .hasRole("RIDER")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form

@@ -59,6 +59,13 @@
             </div>
           </div>
 
+          <label class="flex items-center gap-2 text-sm text-muted-foreground" data-login-only="data-login-only"
+                 th:style="${mode == 'signup'} ? 'display:none;' : ''">
+            <input type="checkbox" name="remember-me" value="true" checked="checked"
+                   class="h-4 w-4 rounded border-input accent-primary" />
+            Keep me signed in
+          </label>
+
           <p class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" th:if="${error}" th:text="${error}">Error message</p>
           <p class="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary" th:if="${success}" th:text="${success}">Success message</p>
 

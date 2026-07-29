@@ -59,20 +59,21 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/auth", "/register", "/login",
                         "/css/**", "/js/**", "/images/**", "/error").permitAll()
-                // Driver features: BOTH members qualify too
-                .requestMatchers("/dashboard/driver", "/rides/create")
-                        .hasAnyRole("DRIVER", "BOTH")
-                .requestMatchers(HttpMethod.POST, "/rides/*/requests")
-                        .hasAnyRole("RIDER", "BOTH")
-                .requestMatchers(HttpMethod.POST, "/ride-requests/*/confirm", "/ride-requests/*/reject")
-                        .hasAnyRole("DRIVER", "BOTH")
-                .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
-                        .hasAnyRole("RIDER", "BOTH")
-                .requestMatchers(HttpMethod.POST, "/rides/*/delete")
-                        .hasAnyRole("DRIVER", "BOTH")
-                // Rider features
-                .requestMatchers("/dashboard/rider", "/rides/available")
-                        .hasAnyRole("RIDER", "BOTH")
+                // Driver features
+                    .requestMatchers("/dashboard/driver", "/rides/create")
+                  .hasRole("DRIVER")
+                    .requestMatchers(HttpMethod.POST, "/ride-requests/*/confirm", "/ride-requests/*/reject")
+                     .hasRole("DRIVER")
+                    .requestMatchers(HttpMethod.POST, "/rides/*/delete")
+                     .hasRole("DRIVER")
+
+                    // Rider features
+                    .requestMatchers("/dashboard/rider", "/rides/available")
+                    .hasRole("RIDER")
+                    .requestMatchers(HttpMethod.POST, "/rides/*/requests")
+                    .hasRole("RIDER")
+                        .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
+                     .hasRole("RIDER")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form

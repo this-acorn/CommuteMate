@@ -29,7 +29,7 @@ public class DemoAccountSeeder implements CommandLineRunner {
     public void run(String... args) {
         seed("driver@sfu.ca", "Demo Driver", Role.DRIVER, "demo123");
         seed("rider@sfu.ca", "Demo Rider", Role.RIDER, "demo123");
-        seed("both@sfu.ca", "Demo Member", Role.BOTH, "demo123");
+        seed("demo-rider2@sfu.ca", "Demo Member", Role.RIDER, "demo123");
     }
 
     private void seed(String email, String fullName, Role role, String rawPassword) {

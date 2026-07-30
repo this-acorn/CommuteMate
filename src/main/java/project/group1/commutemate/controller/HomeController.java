@@ -8,10 +8,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import project.group1.commutemate.User.CurrentUserService;
 import project.group1.commutemate.model.Profile;
+import project.group1.commutemate.model.Role;
 
 /**
- * Public landing page for CommuteMate. Also visible while logged in,
- * so the nav must reflect the member's real session state.
+ * Public landing page for CommuteMate. Logged-in members are sent to
+ * their dashboard instead of seeing the marketing page.
  */
 @Controller
 public class HomeController {
@@ -25,8 +26,13 @@ public class HomeController {
     @GetMapping("/")
     public String landing(Model model) {
         Optional<Profile> profile = currentUserService.currentProfile();
-        model.addAttribute("authenticated", profile.isPresent());
-        profile.ifPresent(p -> model.addAttribute("profile", p));
+        if (profile.isPresent()) {
+            return profile.get().getRole() == Role.DRIVER
+                    ? "redirect:/dashboard/driver"
+                    : "redirect:/dashboard/rider";
+        }
+
+        model.addAttribute("authenticated", false);
         return "index";
     }
 }

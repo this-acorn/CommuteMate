@@ -15,10 +15,8 @@
     <a th:href="@{/rides/{id}(id=${chat.ride.id})}"
        class="text-sm text-muted-foreground hover:text-foreground">← Back to ride details</a>
 
-    <div th:if="${successMessage}"
-         class="mt-5 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800"
-         th:text="${successMessage}"></div>
-    <div th:if="${errorMessage}"
+    <div id="chat-error"
+         th:hidden="${errorMessage == null}"
          class="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
          th:text="${errorMessage}"></div>
 
@@ -37,13 +35,16 @@
         </div>
 
         <div id="chat-thread" class="chat-thread mt-5 rounded-xl bg-secondary/60 p-4">
-          <div th:if="${#lists.isEmpty(chat.messages)}" class="py-10 text-center">
+          <div id="empty-chat"
+               th:hidden="${!#lists.isEmpty(chat.messages)}"
+               class="py-10 text-center">
             <p class="font-medium">No messages yet.</p>
             <p class="mt-1 text-sm text-muted-foreground">Start the conversation with a pickup or timing update.</p>
           </div>
 
-          <div th:unless="${#lists.isEmpty(chat.messages)}" class="space-y-3">
+          <div id="message-list" class="space-y-3">
             <article th:each="message : ${chat.messages}"
+                     th:attr="data-message-id=${message.id}"
                      class="chat-message rounded-xl border border-border bg-card px-4 py-3"
                      th:classappend="${message.mine} ? ' chat-message-mine border-primary/30 bg-primary/5' : ''">
               <div class="flex items-start justify-between gap-3">
@@ -58,13 +59,17 @@
           </div>
         </div>
 
-        <form method="post" th:action="@{/rides/{id}/chat/messages(id=${chat.ride.id})}" class="chat-compose mt-4">
+        <form id="chat-form"
+              method="post"
+              th:action="@{/rides/{id}/chat/messages(id=${chat.ride.id})}"
+              th:attr="data-poll-url=@{/rides/{id}/chat/messages(id=${chat.ride.id})}"
+              class="chat-compose mt-4">
           <div class="chat-compose-bar">
             <label for="message" class="sr-only">New message</label>
             <textarea id="message" name="message" required="required" rows="1"
                       th:attr="maxlength=${maxMessageLength}"
                       placeholder="Message"></textarea>
-            <button type="submit"
+            <button id="send-button" type="submit"
                     class="chat-send-button inline-flex items-center justify-center bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90">
               Send
             </button>
@@ -75,34 +80,6 @@
   </main>
 </div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    var thread = document.getElementById("chat-thread");
-    var message = document.getElementById("message");
-
-    if (thread) {
-      thread.scrollTop = thread.scrollHeight;
-    }
-
-    if (message) {
-      var resizeMessageBox = function () {
-        message.style.height = "auto";
-        message.style.height = Math.min(message.scrollHeight, 128) + "px";
-      };
-
-      message.addEventListener("input", resizeMessageBox);
-      message.addEventListener("keydown", function (event) {
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          if (message.value.trim()) {
-            message.form.requestSubmit();
-          }
-        }
-      });
-
-      resizeMessageBox();
-    }
-  });
-</script>
+<script th:src="@{/js/ride-chat.js}" defer></script>
 </body>
 </html>

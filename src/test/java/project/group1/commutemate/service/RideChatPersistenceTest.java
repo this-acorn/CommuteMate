@@ -66,7 +66,7 @@ class RideChatPersistenceTest {
         rideRepository.flush();
 
         assertTrue(messageRepository
-                .findByRide_IdOrderByCreatedAtAscIdAsc(ride.getId()).isEmpty());
+                .findTop100ByRide_IdOrderByIdDesc(ride.getId()).isEmpty());
         assertTrue(requestRepository
                 .findByRideIdAndRiderEmailIgnoreCase(ride.getId(), "rider@sfu.ca").isEmpty());
     }

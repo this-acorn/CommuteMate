@@ -24,7 +24,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import project.group1.commutemate.exception.RideOperationException;
+import project.group1.commutemate.exception.RideChatAccessException;
+import project.group1.commutemate.exception.RideChatNotFoundException;
+import project.group1.commutemate.exception.RideChatValidationException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
@@ -71,7 +73,7 @@ class RideChatServiceTest {
     @Test
     void ownerCanOpenRideChatWithoutARequest() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(messageRepository.findByRide_IdOrderByCreatedAtAscIdAsc(10L))
+        when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
                 .thenReturn(List.of());
 
         RideChatView chat = service.openChat(10L, driver);
@@ -82,11 +84,40 @@ class RideChatServiceTest {
     }
 
     @Test
+    void initialMessagesAreDisplayedInAscendingIdOrder() {
+        RideMessage newest = new RideMessage(
+                ride, "driver@sfu.ca", "Demo Driver", "Second message");
+        newest.setId(12L);
+        RideMessage older = new RideMessage(
+                ride, "driver@sfu.ca", "Demo Driver", "First message");
+        older.setId(11L);
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
+                .thenReturn(List.of(newest, older));
+
+        RideChatView chat = service.openChat(10L, driver);
+
+        assertEquals(List.of(11L, 12L),
+                chat.messages().stream().map(message -> message.id()).toList());
+    }
+
+    @Test
+    void missingRideUsesNotFoundFailure() {
+        when(rideRepository.findById(99L)).thenReturn(Optional.empty());
+
+        RideChatNotFoundException error = assertThrows(RideChatNotFoundException.class,
+                () -> service.openChat(99L, driver));
+
+        assertEquals("Ride not found.", error.getMessage());
+        verifyNoInteractions(requestRepository, messageRepository);
+    }
+
+    @Test
     void confirmedRiderCanOpenRideChat() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
         when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
                 10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(true);
-        when(messageRepository.findByRide_IdOrderByCreatedAtAscIdAsc(10L))
+        when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
                 .thenReturn(List.of(new RideMessage(
                         ride, "driver@sfu.ca", "Demo Driver", "Meet at the east entrance.")));
 
@@ -104,12 +135,12 @@ class RideChatServiceTest {
         when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
                 10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
 
-        RideOperationException error = assertThrows(RideOperationException.class,
+        RideChatAccessException error = assertThrows(RideChatAccessException.class,
                 () -> service.openChat(10L, rider));
 
         assertEquals("Only the ride owner and confirmed riders can access this chat.",
                 error.getMessage());
-        verify(messageRepository, never()).findByRide_IdOrderByCreatedAtAscIdAsc(10L);
+        verify(messageRepository, never()).findTop100ByRide_IdOrderByIdDesc(10L);
     }
 
     @Test
@@ -129,13 +160,49 @@ class RideChatServiceTest {
         assertEquals("Demo Rider", saved.getSenderName());
         assertEquals("I am waiting by the library.", saved.getBody());
         assertEquals(ride, saved.getRide());
+        assertTrue(ride.getMessages().contains(saved));
+    }
+
+
+    @Test
+    void pollingReturnsOnlyMessagesAfterTheLastDisplayedId() {
+        RideMessage newMessage = new RideMessage(
+                ride, "driver@sfu.ca", "Demo Driver", "I am outside.");
+        newMessage.setId(51L);
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(messageRepository
+                .findTop100ByRide_IdAndIdGreaterThanOrderByIdAsc(10L, 50L))
+                .thenReturn(List.of(newMessage));
+
+        var messages = service.loadMessagesAfter(10L, driver, 50L);
+
+        assertEquals(1, messages.size());
+        assertEquals(51L, messages.getFirst().id());
+        assertEquals("I am outside.", messages.getFirst().body());
+        assertTrue(messages.getFirst().mine());
+        verifyNoInteractions(requestRepository);
+    }
+
+    @Test
+    void pendingRiderCannotPollMessages() {
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
+                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
+
+        RideChatAccessException error = assertThrows(RideChatAccessException.class,
+                () -> service.loadMessagesAfter(10L, rider, 50L));
+
+        assertEquals("Only the ride owner and confirmed riders can access this chat.",
+                error.getMessage());
+        verify(messageRepository, never())
+                .findTop100ByRide_IdAndIdGreaterThanOrderByIdAsc(any(), any());
     }
 
     @Test
     void blankMessageIsRejectedWithoutSaving() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
 
-        RideOperationException error = assertThrows(RideOperationException.class,
+        RideChatValidationException error = assertThrows(RideChatValidationException.class,
                 () -> service.sendMessage(10L, driver, "   \n  "));
 
         assertEquals("Message cannot be empty.", error.getMessage());
@@ -147,7 +214,7 @@ class RideChatServiceTest {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
         String body = "x".repeat(RideChatService.MAX_MESSAGE_LENGTH + 1);
 
-        RideOperationException error = assertThrows(RideOperationException.class,
+        RideChatValidationException error = assertThrows(RideChatValidationException.class,
                 () -> service.sendMessage(10L, driver, body));
 
         assertEquals("Message cannot be longer than 1000 characters.", error.getMessage());
@@ -162,14 +229,14 @@ class RideChatServiceTest {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
         when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
                 10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(true);
-        when(messageRepository.findByRide_IdOrderByCreatedAtAscIdAsc(10L))
+        when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
                 .thenReturn(List.of(message));
 
         RideChatView chat = service.openChat(10L, rider);
 
         assertTrue(chat.messages().getFirst().mine());
         ArgumentCaptor<Long> rideId = ArgumentCaptor.forClass(Long.class);
-        verify(messageRepository).findByRide_IdOrderByCreatedAtAscIdAsc(rideId.capture());
+        verify(messageRepository).findTop100ByRide_IdOrderByIdDesc(rideId.capture());
         assertEquals(10L, rideId.getValue());
     }
 }

@@ -272,6 +272,14 @@ public class Ride {
         return requests;
     }
 
+    public void addMessage(RideMessage message) {
+        if (message == null) {
+            throw new IllegalArgumentException("Message cannot be null.");
+        }
+        messages.add(message);
+        message.setRide(this);
+    }
+
     public List<RideMessage> getMessages() {
         return messages;
     }

@@ -2,13 +2,17 @@ package project.group1.commutemate.service;
 
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import project.group1.commutemate.exception.RideOperationException;
+import project.group1.commutemate.exception.RideChatAccessException;
+import project.group1.commutemate.exception.RideChatNotFoundException;
+import project.group1.commutemate.exception.RideChatValidationException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
@@ -24,6 +28,7 @@ import project.group1.commutemate.repository.RideRequestRepository;
 public class RideChatService {
 
     public static final int MAX_MESSAGE_LENGTH = 1000;
+    public static final int MESSAGE_BATCH_SIZE = 100;
 
     private static final DateTimeFormatter MESSAGE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.ENGLISH);
@@ -43,14 +48,17 @@ public class RideChatService {
         this.clock = clock;
     }
 
-    /** Loads one ride conversation after confirming that the current member belongs to it. */
+    /** Loads the latest message batch after confirming that the member belongs to the ride. */
     @Transactional(readOnly = true)
     public RideChatView openChat(Long rideId, Profile member) {
         Ride ride = findRide(rideId);
         boolean owner = requireParticipant(ride, member);
-        List<RideMessageView> messages = messageRepository
-                .findByRide_IdOrderByCreatedAtAscIdAsc(rideId)
-                .stream()
+
+        List<RideMessage> newestFirst = new ArrayList<>(
+                messageRepository.findTop100ByRide_IdOrderByIdDesc(rideId));
+        Collections.reverse(newestFirst);
+
+        List<RideMessageView> messages = newestFirst.stream()
                 .map(message -> toView(message, member))
                 .toList();
         return new RideChatView(ride, messages, owner);
@@ -68,12 +76,30 @@ public class RideChatService {
                 ? email
                 : sender.getFullName().trim();
 
-        return messageRepository.save(new RideMessage(ride, email, name, body));
+        RideMessage message = new RideMessage(ride, email, name, body);
+        ride.addMessage(message);
+        return messageRepository.save(message);
+    }
+
+    /** Returns one ID-ordered batch after the last message already displayed. */
+    @Transactional(readOnly = true)
+    public List<RideMessageView> loadMessagesAfter(
+            Long rideId, Profile member, Long afterId) {
+        Ride ride = findRide(rideId);
+        requireParticipant(ride, member);
+
+        long safeAfterId = afterId == null || afterId < 0 ? 0 : afterId;
+        return messageRepository
+                .findTop100ByRide_IdAndIdGreaterThanOrderByIdAsc(
+                        rideId, safeAfterId)
+                .stream()
+                .map(message -> toView(message, member))
+                .toList();
     }
 
     private Ride findRide(Long rideId) {
         return rideRepository.findById(rideId)
-                .orElseThrow(() -> new RideOperationException("Ride not found."));
+                .orElseThrow(() -> new RideChatNotFoundException("Ride not found."));
     }
 
     /**
@@ -81,7 +107,8 @@ public class RideChatService {
      */
     private boolean requireParticipant(Ride ride, Profile member) {
         if (member == null || member.getEmail() == null || member.getEmail().isBlank()) {
-            throw new RideOperationException("A signed-in ride participant is required.");
+            throw new RideChatAccessException(
+                    "A signed-in ride participant is required.");
         }
 
         String email = member.getEmail().trim();
@@ -93,7 +120,7 @@ public class RideChatService {
                 .existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
                         ride.getId(), email, RequestStatus.CONFIRMED);
         if (!confirmedRider) {
-            throw new RideOperationException(
+            throw new RideChatAccessException(
                     "Only the ride owner and confirmed riders can access this chat.");
         }
         return false;
@@ -101,11 +128,11 @@ public class RideChatService {
 
     private String normalizeBody(String rawBody) {
         if (rawBody == null || rawBody.isBlank()) {
-            throw new RideOperationException("Message cannot be empty.");
+            throw new RideChatValidationException("Message cannot be empty.");
         }
         String body = rawBody.trim();
         if (body.length() > MAX_MESSAGE_LENGTH) {
-            throw new RideOperationException(
+            throw new RideChatValidationException(
                     "Message cannot be longer than " + MAX_MESSAGE_LENGTH + " characters.");
         }
         return body;

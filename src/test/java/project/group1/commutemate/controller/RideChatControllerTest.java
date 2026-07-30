@@ -6,7 +6,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,10 +27,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import project.group1.commutemate.User.CurrentUserService;
-import project.group1.commutemate.exception.RideOperationException;
+import project.group1.commutemate.exception.RideChatAccessException;
+import project.group1.commutemate.exception.RideChatNotFoundException;
+import project.group1.commutemate.exception.RideChatValidationException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideChatView;
+import project.group1.commutemate.model.RideMessageView;
 import project.group1.commutemate.model.Role;
 import project.group1.commutemate.service.RideChatService;
 
@@ -73,7 +78,7 @@ class RideChatControllerTest {
 
     @Test
     void unauthorizedChatAccessRedirectsToRideDetails() throws Exception {
-        when(chatService.openChat(10L, profile)).thenThrow(new RideOperationException(
+        when(chatService.openChat(10L, profile)).thenThrow(new RideChatAccessException(
                 "Only the ride owner and confirmed riders can access this chat."));
 
         mockMvc.perform(get("/rides/{rideId}/chat", 10L))
@@ -84,27 +89,65 @@ class RideChatControllerTest {
     }
 
     @Test
+    void pollingReturnsOnlyNewMessages() throws Exception {
+        RideMessageView message = new RideMessageView(
+                51L, "driver@sfu.ca", "Demo Driver", "I am outside.",
+                "Jul 29, 2:15 PM", false);
+        when(chatService.loadMessagesAfter(10L, profile, 50L))
+                .thenReturn(List.of(message));
+
+        mockMvc.perform(get("/rides/{rideId}/chat/messages", 10L)
+                        .param("after", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(51))
+                .andExpect(jsonPath("$[0].body").value("I am outside."));
+
+        verify(chatService).loadMessagesAfter(10L, profile, 50L);
+    }
+
+    @Test
     void sendMessageUsesSignedInProfileInsteadOfForgedEmail() throws Exception {
         mockMvc.perform(post("/rides/{rideId}/chat/messages", 10L)
                         .param("message", "I am at the pickup point.")
                         .param("email", "victim@sfu.ca"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/rides/10/chat"))
-                .andExpect(flash().attribute("successMessage", "Message sent."));
+                .andExpect(status().isNoContent());
 
         verify(chatService).sendMessage(
                 eq(10L), same(profile), eq("I am at the pickup point."));
     }
 
     @Test
-    void validationErrorReturnsToChatWithMessage() throws Exception {
+    void validationErrorReturnsBadRequestText() throws Exception {
         when(chatService.sendMessage(10L, profile, " "))
-                .thenThrow(new RideOperationException("Message cannot be empty."));
+                .thenThrow(new RideChatValidationException("Message cannot be empty."));
 
         mockMvc.perform(post("/rides/{rideId}/chat/messages", 10L)
                         .param("message", " "))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/rides/10/chat"))
-                .andExpect(flash().attribute("errorMessage", "Message cannot be empty."));
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Message cannot be empty."));
     }
+
+    @Test
+    void accessErrorReturnsForbiddenText() throws Exception {
+        when(chatService.sendMessage(10L, profile, "Hello"))
+                .thenThrow(new RideChatAccessException(
+                        "Only the ride owner and confirmed riders can access this chat."));
+
+        mockMvc.perform(post("/rides/{rideId}/chat/messages", 10L)
+                        .param("message", "Hello"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(
+                        "Only the ride owner and confirmed riders can access this chat."));
+    }
+
+    @Test
+    void missingRideReturnsNotFoundText() throws Exception {
+        when(chatService.loadMessagesAfter(99L, profile, 0L))
+                .thenThrow(new RideChatNotFoundException("Ride not found."));
+
+        mockMvc.perform(get("/rides/{rideId}/chat/messages", 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("Ride not found."));
+    }
+
 }

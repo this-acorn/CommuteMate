@@ -1,17 +1,26 @@
 package project.group1.commutemate.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import project.group1.commutemate.User.CurrentUserService;
+import project.group1.commutemate.exception.RideChatAccessException;
+import project.group1.commutemate.exception.RideChatNotFoundException;
+import project.group1.commutemate.exception.RideChatValidationException;
 import project.group1.commutemate.exception.RideOperationException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RideChatView;
+import project.group1.commutemate.model.RideMessageView;
 import project.group1.commutemate.service.RideChatService;
 
 /** Web endpoints for the persistent conversation attached to a ride. */
@@ -42,17 +51,40 @@ public class RideChatController extends AuthenticatedController {
         }
     }
 
+    /** Supplies new messages for lightweight browser polling. */
+    @GetMapping("/rides/{rideId}/chat/messages")
+    @ResponseBody
+    public ResponseEntity<?> newMessages(
+            @PathVariable Long rideId,
+            @RequestParam(name = "after", defaultValue = "0") Long afterId) {
+        Profile profile = requireCurrentProfile();
+        try {
+            List<RideMessageView> messages =
+                    chatService.loadMessagesAfter(rideId, profile, afterId);
+            return ResponseEntity.ok(messages);
+        } catch (RideChatNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        } catch (RideChatAccessException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        }
+    }
+
+    /** Saves a message without reloading the whole chat page. */
     @PostMapping("/rides/{rideId}/chat/messages")
-    public String sendMessage(@PathVariable Long rideId,
-                              @RequestParam(name = "message", required = false) String message,
-                              RedirectAttributes redirect) {
+    @ResponseBody
+    public ResponseEntity<?> sendMessage(
+            @PathVariable Long rideId,
+            @RequestParam(name = "message", required = false) String message) {
         Profile profile = requireCurrentProfile();
         try {
             chatService.sendMessage(rideId, profile, message);
-            redirect.addFlashAttribute("successMessage", "Message sent.");
-        } catch (RideOperationException ex) {
-            redirect.addFlashAttribute("errorMessage", ex.getMessage());
+            return ResponseEntity.noContent().build();
+        } catch (RideChatValidationException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (RideChatNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        } catch (RideChatAccessException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
         }
-        return "redirect:/rides/" + rideId + "/chat";
     }
 }

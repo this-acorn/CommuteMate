@@ -87,13 +87,51 @@
     var chips = document.querySelectorAll("[data-sort]");
     var count = document.querySelector("[data-rides-count]");
     var empty = document.querySelector("[data-rides-empty]");
+    var applyBtn = document.querySelector("[data-rides-apply]");
+    var form = document.querySelector("[data-rides-filters]");
+    var departure = form ? form.querySelector("input[name='departure']") : null;
+    var destination = form ? form.querySelector("input[name='destination']") : null;
     var cards = Array.prototype.slice.call(grid.querySelectorAll("[data-ride]"));
+
+    var fields = { q: search, departure: departure, destination: destination };
+
+    // The server filters on these too, so arriving with them in the URL renders a
+    // partial list that client-side filtering can never widen again. Reload once
+    // to the bare URL for the full set, carrying the values in the hash where the
+    // server cannot act on them, then restore them into the boxes below.
+    var params = new URLSearchParams(window.location.search);
+    if (Object.keys(fields).some(function (k) { return params.get(k); })) {
+      var carried = new URLSearchParams();
+      Object.keys(fields).forEach(function (k) {
+        if (params.get(k)) carried.set(k, params.get(k));
+        params.delete(k);
+      });
+      var rest = params.toString();
+      window.location.replace(window.location.pathname
+        + (rest ? "?" + rest : "") + "#" + carried.toString());
+      return;
+    }
+
+    if (window.location.hash.length > 1) {
+      var restored = new URLSearchParams(window.location.hash.slice(1));
+      Object.keys(fields).forEach(function (k) {
+        if (fields[k] && restored.get(k)) fields[k].value = restored.get(k);
+      });
+    }
 
     // Initial sort = the chip the server rendered as active (bg-primary)
     var currentSort = "Departure";
     chips.forEach(function (c) {
       if (c.classList.contains("bg-primary")) currentSort = c.getAttribute("data-sort");
     });
+
+    function setSort(value) {
+      currentSort = value;
+      chips.forEach(function (c) {
+        var active = c.getAttribute("data-sort") === value;
+        swapClasses(c, active ? CHIP_INACTIVE : CHIP_ACTIVE, active ? CHIP_ACTIVE : CHIP_INACTIVE);
+      });
+    }
 
     var sorters = {
       "Departure": function (a, b) { return str(a, "depart").localeCompare(str(b, "depart")); },
@@ -105,14 +143,19 @@
     function num(card, key) { return parseFloat(card.getAttribute("data-" + key)) || 0; }
     function str(card, key) { return card.getAttribute("data-" + key) || ""; }
 
+    function val(input) { return (input ? input.value : "").trim().toLowerCase(); }
+
     function apply() {
-      var q = (search ? search.value : "").trim().toLowerCase();
+      var q = val(search);
+      var from = val(departure);
+      var to = val(destination);
       var visible = 0;
 
       var ordered = cards.slice().sort(sorters[currentSort] || sorters.Departure);
       ordered.forEach(function (card) {
-        var hay = (card.getAttribute("data-search") || "").toLowerCase();
-        var match = hay.indexOf(q) !== -1;
+        var match = str(card, "search").indexOf(q) !== -1
+          && str(card, "from").indexOf(from) !== -1
+          && str(card, "to").indexOf(to) !== -1;
         card.style.display = match ? "" : "none";
         if (match) visible++;
         grid.appendChild(card); // re-order in DOM
@@ -122,17 +165,24 @@
       if (empty) empty.style.display = visible === 0 ? "" : "none";
     }
 
-    if (search) search.addEventListener("input", apply);
+    // All three boxes filter live, so the Apply button has nothing left to do and
+    // submitting would only cost a round trip.
+    Object.keys(fields).forEach(function (k) {
+      if (fields[k]) fields[k].addEventListener("input", apply);
+    });
+    if (applyBtn) applyBtn.style.display = "none";
+    if (form) form.addEventListener("submit", function (e) { e.preventDefault(); });
+
     chips.forEach(function (chip) {
-      chip.addEventListener("click", function (e) {
-        e.preventDefault(); // sort in place instead of reloading via the form
-        chips.forEach(function (c) { swapClasses(c, CHIP_ACTIVE, CHIP_INACTIVE); });
-        swapClasses(chip, CHIP_INACTIVE, CHIP_ACTIVE);
-        currentSort = chip.getAttribute("data-sort");
+      // Sorting is client-side now, so they are not submit buttons any more.
+      chip.type = "button";
+      chip.addEventListener("click", function () {
+        setSort(chip.getAttribute("data-sort"));
         apply();
       });
     });
 
+    setSort(currentSort);
     apply();
   }
 

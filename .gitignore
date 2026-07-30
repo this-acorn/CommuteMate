@@ -35,4 +35,8 @@ build/
 ## Mac files ###
 .DS_Store
 
-/datanode_modules/
+### Local H2 development database — never commit, and never rely on it in a
+### deployment: Render wipes the container filesystem on every restart.
+/data/
+
+node_modules/

@@ -4,7 +4,7 @@ CommuteMate is a web-based application designed to help SFU students commute to 
 
 ## Tech Stack
 
-CommuteMate is a **Spring Boot** application (Java 21) that serves server-rendered **Thymeleaf** HTML pages styled with plain **CSS** and enhanced with vanilla **JavaScript**. User accounts, rides, and ride requests are stored in a file-based H2 database. The external APIs (TransLink, Open-Meteo, and OpenRouteService) are planned for later iterations.
+CommuteMate is a **Spring Boot** application (Java 21) that serves server-rendered **Thymeleaf** HTML pages styled with plain **CSS** and enhanced with vanilla **JavaScript**. User accounts, rides, and ride requests are stored in H2 for local development and in **Postgres** when deployed. The external APIs (TransLink, Open-Meteo, and OpenRouteService) are planned for later iterations.
 
 ## Running CommuteMate
 
@@ -17,6 +17,26 @@ From the `group-project-1` directory:
 Then open <http://localhost:8080>. To build a runnable jar instead: `./mvnw clean package` then `java -jar target/commutemate-0.0.1-SNAPSHOT.jar`.
 
 Demo rides are enabled by default so a fresh checkout is immediately browsable. Set `SEED_DEMO_DATA=false` to disable them.
+
+Locally the database is an H2 file under `data/`, which is git-ignored. Delete that folder to start from a clean database.
+
+## Deploying to Render
+
+Render rebuilds the container filesystem on every deploy, on every restart, and whenever a free instance wakes from an idle spin-down. Anything written inside the container — including an H2 file — is erased each time, so the deployment **must** point at a managed Postgres instance or every registered account disappears.
+
+Create a Postgres instance in Render, then set these environment variables on the web service:
+
+| Variable | Value |
+| --- | --- |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://HOST/DATABASE` |
+| `SPRING_DATASOURCE_USERNAME` | the database user |
+| `SPRING_DATASOURCE_PASSWORD` | the database password |
+| `REMEMBER_ME_KEY` | any long random string |
+| `TRANSLINK_API_KEY` | the TransLink key |
+
+Render's dashboard shows an *Internal Database URL* in the form `postgresql://USER:PASSWORD@HOST/DATABASE`. That is **not** a JDBC URL — split it into the three `SPRING_DATASOURCE_*` values above, keeping the `jdbc:postgresql://` prefix and dropping the credentials from the URL itself.
+
+`REMEMBER_ME_KEY` signs the "Keep me signed in" cookie. It has to stay the same across deploys; if it changes, every outstanding cookie is invalidated and members are signed out. Login sessions themselves are stored in the database (`SPRING_SESSION`), so they survive restarts too.
 
 ## Screens
 

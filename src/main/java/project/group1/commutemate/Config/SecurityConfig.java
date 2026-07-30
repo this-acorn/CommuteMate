@@ -1,5 +1,6 @@
 package project.group1.commutemate.Config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,18 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    /**
+     * Signs the remember-me cookie. It has to stay the same across restarts —
+     * Spring Security otherwise invents a random key at startup, which would
+     * invalidate every outstanding cookie the moment Render replaces the
+     * container. Set REMEMBER_ME_KEY in the deployment environment.
+     */
+    private final String rememberMeKey;
+
+    public SecurityConfig(@Value("${app.remember-me.key}") String rememberMeKey) {
+        this.rememberMeKey = rememberMeKey;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -81,19 +94,27 @@ public class SecurityConfig {
                 // Driver features
                 .requestMatchers("/dashboard/driver", "/rides/create")
                         .hasRole("DRIVER")
-                .requestMatchers(HttpMethod.POST, "/rides/*/requests")
-                        .hasRole("RIDER")
-                .requestMatchers(HttpMethod.POST, "/ride-requests/*/confirm", "/ride-requests/*/reject")
+                .requestMatchers(
+                        HttpMethod.POST,
+                        "/ride-requests/*/confirm",
+                        "/ride-requests/*/reject")
                         .hasRole("DRIVER")
-                .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
-                        .hasRole("RIDER")
                 .requestMatchers(HttpMethod.POST, "/rides/*/delete")
                         .hasRole("DRIVER")
-                .requestMatchers("/rides/*/chat", "/rides/*/chat/messages")
-                        .authenticated()
+
                 // Rider features
                 .requestMatchers("/dashboard/rider", "/rides/available")
                         .hasRole("RIDER")
+                .requestMatchers(HttpMethod.POST, "/rides/*/requests")
+                        .hasRole("RIDER")
+                .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
+                        .hasRole("RIDER")
+
+                // Chat features
+                .requestMatchers(
+                        "/rides/*/chat",
+                        "/rides/*/chat/messages")
+                        .authenticated()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
@@ -105,8 +126,16 @@ public class SecurityConfig {
                 .failureUrl("/auth?mode=login&error")
                 .permitAll()
             )
+            // Re-authenticate the member from the remember-me cookie after the
+            // stored session expires.
+            .rememberMe(remember -> remember
+                .key(rememberMeKey)
+                .rememberMeParameter("remember-me")
+                .tokenValiditySeconds(30 * 24 * 60 * 60)
+            )
             .exceptionHandling(ex -> ex
-                // Fetch calls must receive an HTTP status.
+                // Fetch-based chat requests must receive an HTTP status instead
+                // of being redirected to a dashboard or login page.
                 .defaultAuthenticationEntryPointFor(
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                         chatMessageEndpoint)

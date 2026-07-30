@@ -24,15 +24,15 @@ public class Profile {
         this.ecoScore = ecoScore;
     }
 
-            /** True when the profile role is DRIVER. */
-        public boolean isDriverCapable() {
-         return role == Role.DRIVER;
-        }
+    /** True when the profile role is DRIVER. */
+    public boolean isDriverCapable() {
+        return role == Role.DRIVER;
+    }
 
-        /** True when the profile role is RIDER. */
-        public boolean isRiderCapable() {
-         return role == Role.RIDER;
-        }
+    /** True when the profile role is RIDER. */
+    public boolean isRiderCapable() {
+        return role == Role.RIDER;
+    }
 
     /** Initials shown in avatar bubbles, e.g. "Alex Chen" -> "AC". */
     public String getInitials() {

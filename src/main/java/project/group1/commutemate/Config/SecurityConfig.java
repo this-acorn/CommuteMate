@@ -60,20 +60,19 @@ public class SecurityConfig {
                 .requestMatchers("/", "/auth", "/register", "/login",
                         "/css/**", "/js/**", "/images/**", "/error").permitAll()
                 // Driver features
-                    .requestMatchers("/dashboard/driver", "/rides/create")
-                  .hasRole("DRIVER")
-                    .requestMatchers(HttpMethod.POST, "/ride-requests/*/confirm", "/ride-requests/*/reject")
-                     .hasRole("DRIVER")
-                    .requestMatchers(HttpMethod.POST, "/rides/*/delete")
-                     .hasRole("DRIVER")
-
-                    // Rider features
-                    .requestMatchers("/dashboard/rider", "/rides/available")
-                    .hasRole("RIDER")
-                    .requestMatchers(HttpMethod.POST, "/rides/*/requests")
-                    .hasRole("RIDER")
-                        .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
-                     .hasRole("RIDER")
+                .requestMatchers("/dashboard/driver", "/rides/create")
+                        .hasRole("DRIVER")
+                .requestMatchers(HttpMethod.POST, "/ride-requests/*/confirm", "/ride-requests/*/reject")
+                        .hasRole("DRIVER")
+                .requestMatchers(HttpMethod.POST, "/rides/*/delete")
+                        .hasRole("DRIVER")
+                // Rider features
+                .requestMatchers("/dashboard/rider", "/rides/available")
+                        .hasRole("RIDER")
+                .requestMatchers(HttpMethod.POST, "/rides/*/requests")
+                        .hasRole("RIDER")
+                .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
+                        .hasRole("RIDER")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form

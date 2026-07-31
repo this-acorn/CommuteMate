@@ -1,6 +1,7 @@
 package project.group1.commutemate.service;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -143,12 +144,90 @@ public class RideCoordinationService {
         // Ride.requests uses cascade remove
         rideRepository.delete(ride);
     }
+
+    // Epic 4: post-ride workflow, step 1 of 2. The rider confirms they are
+    // physically boarding, shortly before departure. This does not complete
+    // the ride by itself — the driver still has to confirm arrival for
+    // everyone who boarded (see confirmArrival() below).
+    @Transactional
+    public RideRequest confirmBoarding(Long requestId, Profile rider) {
+        requireRiderCapability(rider);
+        RideRequest request = lockedRequest(requestId);
+        Ride ride = request.getRide();
+
+        if (!request.getRiderEmail().equalsIgnoreCase(rider.getEmail())) {
+            throw new RideOperationException("Only the rider on this request can confirm boarding.");
+        }
+        if (request.getStatus() != RequestStatus.CONFIRMED) {
+            throw new RideOperationException("Only a confirmed request can board.");
+        }
+        if (!isWithinBoardingWindow(ride)) {
+            throw new RideOperationException(
+                    "Boarding opens 30 minutes before departure.");
+        }
+
+        request.setStatus(RequestStatus.BOARDING_CONFIRMED);
+        return requestRepository.save(request);
+    }
+
+    // Epic 4: post-ride workflow, step 2 of 2. The driver confirms arrival at
+    // the destination, which completes the ride for every rider who boarded.
+    // Reward points/eco-score for this ride become part of the driver's
+    // total the moment at least one request is COMPLETED — see
+    // RewardService.summaryForDriver(), which now counts a ride only once it
+    // has an actual completed rider, not just because it was published.
+    @Transactional
+    public List<RideRequest> confirmArrival(Long rideId, Profile driver) {
+        requireDriverCapability(driver);
+        Ride ride = lockedRide(rideId);
+        requireRideOwner(ride, driver, "confirm arrival for this ride");
+
+        List<RideRequest> boarded = requestRepository
+                .findByRide_IdAndStatus(rideId, RequestStatus.BOARDING_CONFIRMED);
+        if (boarded.isEmpty()) {
+            throw new RideOperationException(
+                    "No riders have confirmed boarding yet, so this ride cannot be completed.");
+        }
+
+        for (RideRequest request : boarded) {
+            request.setStatus(RequestStatus.COMPLETED);
+        }
+        return requestRepository.saveAll(boarded);
+    }
+
+    // A rider can confirm boarding starting 30 minutes before departure and
+    // up until the ride departs. (Payment status and the rider-facing
+    // "commute status" summary are follow-up items, not yet part of this
+    // step — see team discussion.)
+    private boolean isWithinBoardingWindow(Ride ride) {
+        if (ride.getDepartAt() == null) {
+            return false;
+        }
+        LocalDateTime windowStart = ride.getDepartAt().minus(Duration.ofMinutes(30));
+        return !now().isBefore(windowStart);
+    }
+
     // Finds all requests for a rider
     public List<RideRequest> findRequestsForRider(String riderEmail) {
         if (riderEmail == null || riderEmail.isBlank()) {
             return List.of();
         }
         return requestRepository.findByRiderEmailIgnoreCaseOrderByUpdatedAtDesc(riderEmail);
+    }
+
+    // Epic 4: rides that have at least one rider awaiting an arrival
+    // confirmation, regardless of departure time — a ride can (and usually
+    // will) have already departed by the time the driver clicks "Arrived".
+    public List<Ride> findRidesAwaitingArrival(String driverEmail) {
+        if (driverEmail == null || driverEmail.isBlank()) {
+            return List.of();
+        }
+        return requestRepository
+                .findByRide_DriverEmailIgnoreCaseAndStatus(driverEmail, RequestStatus.BOARDING_CONFIRMED)
+                .stream()
+                .map(RideRequest::getRide)
+                .distinct()
+                .toList();
     }
 
     // Finds all requests for a driver

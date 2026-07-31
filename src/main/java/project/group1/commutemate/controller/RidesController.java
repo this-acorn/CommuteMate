@@ -52,19 +52,7 @@ public class RidesController extends AuthenticatedController {
                         @RequestParam(required = false, defaultValue = "Departure") String sort,
                         Model model) {
 
-                      List<Ride> rides = rideService.search(query, sort);
-
-    if (hasText(departure)) {
-        rides = rides.stream()
-                .filter(ride -> containsIgnoreCase(ride.getFrom(), departure))
-                .toList();
-    }
-
-    if (hasText(destination)) {
-        rides = rides.stream()
-                .filter(ride -> containsIgnoreCase(ride.getTo(), destination))
-                .toList();
-    }
+    List<Ride> rides = rideService.recommended(query, departure, destination);
 
     model.addAttribute("rides", rides);
     model.addAttribute("query", query == null ? "" : query);
@@ -74,16 +62,7 @@ public class RidesController extends AuthenticatedController {
     model.addAttribute("sortOptions", SORT_OPTIONS);
     return "rides-available";
 }
-        private boolean hasText(String value) {
-    return value != null && !value.isBlank();
-}
-
-    private boolean containsIgnoreCase(String text, String search) {
-    if (text == null || search == null) {
-        return false;
-    }
-    return text.toLowerCase().contains(search.toLowerCase());
-}
+ 
 
     //  ride details
     @GetMapping("/rides/{rideId}")

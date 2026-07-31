@@ -58,6 +58,41 @@ public class RideService {
         return result;
     }
 
+    public List<Ride> recommended(String query, String departure, String destination) {
+    String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+    String dep = departure == null ? "" : departure.trim().toLowerCase(Locale.ROOT);
+    String dest = destination == null ? "" : destination.trim().toLowerCase(Locale.ROOT);
+
+    List<Ride> result = new ArrayList<>();
+
+    for (Ride ride : findAllUpcoming()) {
+        String from = ride.getFrom() == null ? "" : ride.getFrom().toLowerCase(Locale.ROOT);
+        String to = ride.getTo() == null ? "" : ride.getTo().toLowerCase(Locale.ROOT);
+        String driver = ride.getDriver() == null ? "" : ride.getDriver().toLowerCase(Locale.ROOT);
+
+        boolean matchesSearch = q.isBlank()
+                || from.contains(q)
+                || to.contains(q)
+                || driver.contains(q);
+
+        boolean matchesDeparture = dep.isBlank() || from.contains(dep);
+        boolean matchesDestination = dest.isBlank() || to.contains(dest);
+
+        if (matchesSearch && matchesDeparture && matchesDestination) {
+            result.add(ride);
+        }
+    }
+
+    result.sort(Comparator
+            .comparingInt(Ride::getSeatsLeft).reversed()
+            .thenComparingInt(Ride::getEcoScore).reversed()
+            .thenComparingDouble(Ride::getRating).reversed()
+            .thenComparingInt(Ride::getPrice)
+            .thenComparing(Ride::getDepartAt));
+
+    return result;
+}
+
     private Comparator<Ride> comparatorFor(String sort) {
         if (sort == null) {
             sort = "Departure";

@@ -142,8 +142,8 @@ class RideAuthorizationControllerTest {
             null
           );
 
-         when(rideService.search("", "Departure"))
-            .thenReturn(List.of(metrotownRide, coquitlamRide));
+         when(rideService.recommended("", "Metrotown", "SFU"))
+        .thenReturn(List.of(metrotownRide));
 
          mockMvc.perform(get("/rides/available")
                     .param("departure", "Metrotown")
@@ -155,7 +155,7 @@ class RideAuthorizationControllerTest {
             .andExpect(model().attribute("sort", "Departure"))
             .andExpect(model().attribute("rides", List.of(metrotownRide)));
 
-          verify(rideService).search("", "Departure");
+          verify(rideService).recommended("", "Metrotown", "SFU");
 }
 
 }

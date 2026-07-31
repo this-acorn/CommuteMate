@@ -5,7 +5,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -119,11 +121,7 @@ public class RidesController extends AuthenticatedController {
     // create rides
     @GetMapping("/rides/create")
     public String createForm(Model model) {
-        model.addAttribute("minimumDate", LocalDate.now(clock).toString());
-        model.addAttribute("communityStops", RideLocations.COMMUNITY_STOPS);
-        model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
-        model.addAttribute("defaultPickup", RideLocations.DEFAULT_PICKUP);
-        model.addAttribute("defaultDestination", RideLocations.DEFAULT_DESTINATION);
+        populateCreateForm(model);
         return "rides-create";
     }
 
@@ -135,6 +133,7 @@ public class RidesController extends AuthenticatedController {
                          @RequestParam(defaultValue = "3") int seats,
                          @RequestParam(defaultValue = "4") int price,
                          @RequestParam(required = false) String notes,
+                         Model model,
                          RedirectAttributes redirect) {
         Profile profile = requireCurrentProfile();
         try {
@@ -144,12 +143,79 @@ public class RidesController extends AuthenticatedController {
             redirect.addFlashAttribute("successMessage", "Ride published successfully.");
             return "redirect:/dashboard/driver";
         } catch (DateTimeParseException ex) {
-            redirect.addFlashAttribute("errorMessage", "Enter a valid departure date and time.");
-            return "redirect:/rides/create";
+            return createFormWithError(model, from, to, date, time, seats, price, notes,
+                    "Enter a valid departure date and time.", "date", "time");
         } catch (RideOperationException ex) {
-            redirect.addFlashAttribute("errorMessage", ex.getMessage());
-            return "redirect:/rides/create";
+            return createFormWithError(model, from, to, date, time, seats, price, notes,
+                    ex.getMessage(), fieldsForCreateError(ex.getMessage()));
         }
+    }
+
+    private void populateCreateForm(Model model) {
+        String minimumDate = LocalDate.now(clock).toString();
+        model.addAttribute("minimumDate", minimumDate);
+        model.addAttribute("communityStops", RideLocations.COMMUNITY_STOPS);
+        model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
+        model.addAttribute("defaultPickup", RideLocations.DEFAULT_PICKUP);
+        model.addAttribute("defaultDestination", RideLocations.DEFAULT_DESTINATION);
+
+        if (!model.containsAttribute("formFrom")) {
+            model.addAttribute("formFrom", RideLocations.DEFAULT_PICKUP);
+            model.addAttribute("formTo", RideLocations.DEFAULT_DESTINATION);
+            model.addAttribute("formDate", minimumDate);
+            model.addAttribute("formTime", "08:15");
+            model.addAttribute("formSeats", 3);
+            model.addAttribute("formPrice", 4);
+            model.addAttribute("formNotes", "");
+        }
+    }
+
+    private String createFormWithError(Model model,
+                                       String from,
+                                       String to,
+                                       String date,
+                                       String time,
+                                       int seats,
+                                       int price,
+                                       String notes,
+                                       String message,
+                                       String... fields) {
+        model.addAttribute("formFrom", from);
+        model.addAttribute("formTo", to);
+        model.addAttribute("formDate", date);
+        model.addAttribute("formTime", time);
+        model.addAttribute("formSeats", seats);
+        model.addAttribute("formPrice", price);
+        model.addAttribute("formNotes", notes == null ? "" : notes);
+        model.addAttribute("errorMessage", message);
+
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        for (String field : fields) {
+            fieldErrors.put(field, message);
+        }
+        model.addAttribute("fieldErrors", fieldErrors);
+        populateCreateForm(model);
+        return "rides-create";
+    }
+
+    private String[] fieldsForCreateError(String message) {
+        if (message == null) {
+            return new String[0];
+        }
+        if (message.startsWith("Pickup and destination")
+                || message.startsWith("Choose a pickup and destination")) {
+            return new String[]{"from", "to"};
+        }
+        if (message.startsWith("Departure")) {
+            return new String[]{"date", "time"};
+        }
+        if (message.startsWith("Seats")) {
+            return new String[]{"seats"};
+        }
+        if (message.startsWith("Price")) {
+            return new String[]{"price"};
+        }
+        return new String[0];
     }
 
     // delete rides

@@ -15,7 +15,7 @@
     <div class="card-lift rounded-2xl border border-border bg-card p-8">
       <form method="post" th:action="${mode == 'signup'} ? @{/register} : @{/login}" data-auth-form="data-auth-form">
         <input type="hidden" name="mode" th:value="${mode}" />
-        <input type="hidden" name="role" value="rider" />
+        <input type="hidden" name="role" th:value="${selectedRole != null ? selectedRole : 'rider'}" />
 
         <div class="mb-6 grid grid-cols-2 rounded-lg bg-secondary p-1">
           <button type="button" data-mode="login" class="rounded-md px-3 py-2 text-sm font-medium transition-colors"
@@ -33,19 +33,31 @@
           <div class="space-y-1.5" data-signup-only="data-signup-only" style="display:none;">
             <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Full name</label>
             <input id="name" name="fullName" placeholder="Alex Chen" th:value="${fullName}"
+                   th:classappend="${fieldErrors != null and fieldErrors.containsKey('fullName')} ? ' field-error' : ''"
+                   th:attr="aria-invalid=${fieldErrors != null and fieldErrors.containsKey('fullName')}"
                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('fullName')}"
+               th:text="${fieldErrors.get('fullName')}">Full name error</p>
           </div>
 
           <div class="space-y-1.5">
             <label for="email" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">SFU email</label>
             <input id="email" name="email" type="email" placeholder="you@sfu.ca" th:value="${email}" required="required"
+                   th:classappend="${loginError == true or (fieldErrors != null and fieldErrors.containsKey('email'))} ? ' field-error' : ''"
+                   th:attr="aria-invalid=${loginError == true or (fieldErrors != null and fieldErrors.containsKey('email'))}"
                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('email')}"
+               th:text="${fieldErrors.get('email')}">Email error</p>
           </div>
 
           <div class="space-y-1.5">
             <label for="password" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Password</label>
             <input id="password" name="password" type="password" placeholder="At least 6 characters" required="required"
+                   th:classappend="${loginError == true or (fieldErrors != null and fieldErrors.containsKey('password'))} ? ' field-error' : ''"
+                   th:attr="aria-invalid=${loginError == true or (fieldErrors != null and fieldErrors.containsKey('password'))}"
                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('password')}"
+               th:text="${fieldErrors.get('password')}">Password error</p>
           </div>
 
           <div class="space-y-1.5" data-signup-only="data-signup-only" style="display:none;">
@@ -55,10 +67,14 @@
                  sign up as a driver has no cue that they still have to pick. -->
             <div class="grid grid-cols-2 gap-2">
               <button type="button" data-role="rider"
-                      class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors border-primary bg-primary/10 text-primary">rider</button>
+                      class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors"
+                      th:classappend="${selectedRole == 'driver'} ? ' border-border bg-background hover:bg-secondary' : ' border-primary bg-primary/10 text-primary'">rider</button>
               <button type="button" data-role="driver"
-                      class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors border-border bg-background hover:bg-secondary">driver</button>
+                      class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors"
+                      th:classappend="${selectedRole == 'driver'} ? ' border-primary bg-primary/10 text-primary' : ' border-border bg-background hover:bg-secondary'">driver</button>
             </div>
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('role')}"
+               th:text="${fieldErrors.get('role')}">Role error</p>
           </div>
 
           <label class="flex items-center gap-2 text-sm text-muted-foreground" data-login-only="data-login-only"
@@ -68,7 +84,9 @@
             Keep me signed in
           </label>
 
-          <p class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" data-auth-alert="data-auth-alert" th:if="${error}" th:text="${error}">Error message</p>
+          <p class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" data-auth-alert="data-auth-alert"
+             th:if="${error != null and (fieldErrors == null or fieldErrors.isEmpty())}"
+             th:text="${error}">Error message</p>
           <p class="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary" data-auth-alert="data-auth-alert" th:if="${success}" th:text="${success}">Success message</p>
 
           <button type="submit" data-auth-submit="data-auth-submit"

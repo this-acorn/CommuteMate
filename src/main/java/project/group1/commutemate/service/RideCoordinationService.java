@@ -181,9 +181,9 @@ public class RideCoordinationService {
         requireDriverCapability(driver);
         Ride ride = lockedRide(rideId);
         requireRideOwner(ride, driver, "confirm arrival for this ride");
-        // Roman's review: without this check, a driver could mark the ride
-        // completed right after boarding was confirmed, well before the
-        // scheduled departure actually happened.
+        // Without this check, a driver could mark the ride completed right
+        // after boarding was confirmed, well before the scheduled departure
+        // actually happened.
         if (ride.getDepartAt() != null && now().isBefore(ride.getDepartAt())) {
             throw new RideOperationException(
                     "You can't confirm arrival before the scheduled departure time.");

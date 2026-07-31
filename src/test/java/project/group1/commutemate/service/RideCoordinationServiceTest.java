@@ -327,6 +327,36 @@ class RideCoordinationServiceTest {
         assertEquals("Boarding opens 30 minutes before departure.", error.getMessage());
     }
 
+    // Roman's review: boundary tests for the 30-minute window itself,
+    // not just "clearly inside" / "clearly outside" cases.
+    @Test
+    void confirmBoardingAllowsExactlyAtThirtyMinuteBoundary() {
+        // Ride departs in exactly 30 minutes — the boundary is inclusive
+        ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(30));
+        RideRequest confirmed = request(1L);
+        confirmed.setStatus(RequestStatus.CONFIRMED);
+        when(requestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(confirmed));
+        when(requestRepository.save(confirmed)).thenReturn(confirmed);
+
+        RideRequest result = service.confirmBoarding(1L, rider);
+
+        assertEquals(RequestStatus.BOARDING_CONFIRMED, result.getStatus());
+    }
+
+    @Test
+    void confirmBoardingRejectsOneMinuteOutsideThirtyMinuteBoundary() {
+        // Ride departs in 30 minutes and 1 second — just outside the window
+        ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(30).plusSeconds(1));
+        RideRequest confirmed = request(1L);
+        confirmed.setStatus(RequestStatus.CONFIRMED);
+        when(requestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(confirmed));
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.confirmBoarding(1L, rider));
+
+        assertEquals("Boarding opens 30 minutes before departure.", error.getMessage());
+    }
+
     @Test
     void confirmBoardingRejectsNonPendingConfirmedRequest() {
         ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(10));
@@ -356,6 +386,7 @@ class RideCoordinationServiceTest {
 
     @Test
     void confirmArrivalCompletesEveryBoardedRequest() {
+        ride.setDepartAt(LocalDateTime.now(CLOCK).minusMinutes(5)); // already departed
         RideRequest boarded1 = request(1L);
         boarded1.setStatus(RequestStatus.BOARDING_CONFIRMED);
         RideRequest boarded2 = request(2L);
@@ -376,6 +407,7 @@ class RideCoordinationServiceTest {
 
     @Test
     void confirmArrivalRejectsWhenNobodyBoarded() {
+        ride.setDepartAt(LocalDateTime.now(CLOCK).minusMinutes(5)); // already departed
         when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
         when(requestRepository.findByRide_IdAndStatus(10L, RequestStatus.BOARDING_CONFIRMED))
                 .thenReturn(java.util.List.of());
@@ -385,6 +417,38 @@ class RideCoordinationServiceTest {
 
         assertEquals("No riders have confirmed boarding yet, so this ride cannot be completed.",
                 error.getMessage());
+    }
+
+    // Roman's review: confirmArrival() didn't check the departure time at
+    // all — a driver could complete the ride right after boarding was
+    // confirmed, well before departure actually happened.
+    @Test
+    void confirmArrivalRejectsBeforeScheduledDeparture() {
+        ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(20)); // hasn't departed yet
+        when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.confirmArrival(10L, driver("driver@sfu.ca")));
+
+        assertEquals("You can't confirm arrival before the scheduled departure time.",
+                error.getMessage());
+    }
+
+    @Test
+    void confirmArrivalAllowsExactlyAtDepartureTime() {
+        ride.setDepartAt(LocalDateTime.now(CLOCK)); // departing this instant
+        RideRequest boarded = request(1L);
+        boarded.setStatus(RequestStatus.BOARDING_CONFIRMED);
+        when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
+        when(requestRepository.findByRide_IdAndStatus(10L, RequestStatus.BOARDING_CONFIRMED))
+                .thenReturn(java.util.List.of(boarded));
+        when(requestRepository.saveAll(java.util.List.of(boarded)))
+                .thenReturn(java.util.List.of(boarded));
+
+        var completed = service.confirmArrival(10L, driver("driver@sfu.ca"));
+
+        assertEquals(1, completed.size());
+        assertEquals(RequestStatus.COMPLETED, boarded.getStatus());
     }
 
     @Test

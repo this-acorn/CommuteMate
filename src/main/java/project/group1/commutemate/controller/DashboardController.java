@@ -48,8 +48,12 @@ public class DashboardController extends AuthenticatedController {
         Profile profile = requireCurrentProfile();
         LocalDateTime now = LocalDateTime.now(clock);
         List<RideRequest> requests = coordinationService.findRequestsForRider(profile.getEmail());
+        // Roman's review: BOARDING_CONFIRMED was excluded here, so a rider's
+        // ride disappeared from "next ride" the moment they boarded — right
+        // when it's most relevant. Both statuses count as an active upcoming ride.
         Ride nextConfirmedRide = requests.stream()
-                .filter(request -> request.getStatus() == RequestStatus.CONFIRMED)
+                .filter(request -> request.getStatus() == RequestStatus.CONFIRMED
+                        || request.getStatus() == RequestStatus.BOARDING_CONFIRMED)
                 .map(RideRequest::getRide)
                 .filter(ride -> ride.getDepartAt() != null && ride.getDepartAt().isAfter(now))
                 .min((first, second) -> first.getDepartAt().compareTo(second.getDepartAt()))
@@ -94,6 +98,8 @@ public class DashboardController extends AuthenticatedController {
         model.addAttribute("myRides", myRides);
         model.addAttribute("driverRequests", requests);
         model.addAttribute("upcomingRideCount", myRides.size());
+        // Issue #25: driver dashboard previously showed hardcoded points/eco-score.
+        model.addAttribute("profile", profile);
         model.addAttribute("confirmedRiderCount", requests.stream()
                 .filter(request -> request.getStatus() == RequestStatus.CONFIRMED)
                 .count());

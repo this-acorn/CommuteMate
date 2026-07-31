@@ -142,6 +142,9 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  /* Browsers only give links a pointer, so every button had to opt in by hand and
+     most were missed. Disabled ones keep the not-allowed cursor. */
+  button:not(:disabled) { cursor: pointer; }
 }
 
 @utility bg-mountain-gradient {

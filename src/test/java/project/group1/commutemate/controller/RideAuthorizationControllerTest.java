@@ -31,6 +31,7 @@ import project.group1.commutemate.model.Role;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 import project.group1.commutemate.model.Ride;
+import project.group1.commutemate.model.RideRequest;
 
 @WebMvcTest(controllers = {RideRequestController.class, RidesController.class})
 @AutoConfigureMockMvc(addFilters = false)
@@ -52,9 +53,27 @@ class RideAuthorizationControllerTest {
     private RideService rideService;
 
     @MockitoBean
+    private project.group1.commutemate.service.NotificationService notificationService;
+
+    @MockitoBean
     private Clock clock;
 
     private Profile signedInProfile;
+
+    // Confirm/reject/cancel now read fields off the returned
+    // RideRequest to build a notification message, so the mocked service
+    // needs a real object back — a bare, un-stubbed mock previously
+    // returned null harmlessly since the controller ignored the result.
+    private RideRequest requestFixture(Long requestId) {
+        Ride ride = new Ride(
+                "owner-driver@sfu.ca", "Owner Driver", "OD",
+                "Metrotown Station", "SFU Burnaby",
+                LocalDateTime.now().plusHours(2), 3, 0, 4,
+                25, 79, "Test Car", 5.0, null);
+        RideRequest request = new RideRequest(ride, "rider@sfu.ca", "Test Rider");
+        request.setId(requestId);
+        return request;
+    }
 
     @BeforeEach
     void setUp() {
@@ -65,6 +84,9 @@ class RideAuthorizationControllerTest {
 
     @Test
     void confirmUsesSignedInProfileWhenEmailParameterIsForged() throws Exception {
+        when(coordinationService.confirmRequest(eq(41L), same(signedInProfile)))
+                .thenReturn(requestFixture(41L));
+
         mockMvc.perform(post("/ride-requests/{requestId}/confirm", 41L)
                         .param("email", FORGED_EMAIL))
                 .andExpect(status().is3xxRedirection())
@@ -76,6 +98,9 @@ class RideAuthorizationControllerTest {
 
     @Test
     void rejectUsesSignedInProfileWhenEmailParameterIsForged() throws Exception {
+        when(coordinationService.rejectRequest(eq(42L), same(signedInProfile)))
+                .thenReturn(requestFixture(42L));
+
         mockMvc.perform(post("/ride-requests/{requestId}/reject", 42L)
                         .param("email", FORGED_EMAIL))
                 .andExpect(status().is3xxRedirection())
@@ -87,6 +112,9 @@ class RideAuthorizationControllerTest {
 
     @Test
     void cancelUsesSignedInProfileWhenEmailParameterIsForged() throws Exception {
+        when(coordinationService.cancelRequest(eq(43L), same(signedInProfile)))
+                .thenReturn(requestFixture(43L));
+
         mockMvc.perform(post("/ride-requests/{requestId}/cancel", 43L)
                         .param("email", FORGED_EMAIL))
                 .andExpect(status().is3xxRedirection())

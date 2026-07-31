@@ -13,6 +13,7 @@ import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideRequest;
+import project.group1.commutemate.service.NotificationService;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 import project.group1.commutemate.service.TransitService;
@@ -31,10 +32,11 @@ public class DashboardController extends AuthenticatedController {
     public DashboardController(RideService rideService,
                                RideCoordinationService coordinationService,
                                CurrentUserService currentUserService,
+                               NotificationService notificationService,
                                Clock clock,
                                TransitService transitService,
                                WeatherService weatherService) {
-        super(currentUserService);
+        super(currentUserService, notificationService);
         this.rideService = rideService;
         this.coordinationService = coordinationService;
         this.clock = clock;

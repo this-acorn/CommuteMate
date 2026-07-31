@@ -53,6 +53,13 @@ public class RideService {
                 .orElseThrow(() -> new RideOperationException("Ride not found."));
     }
 
+    // lets callers check without catching an exception — used by
+    // the notifications list to show "ride no longer available" instead of
+    // a clickable link that would just redirect away with an error.
+    public boolean exists(Long id) {
+        return id != null && rideRepository.existsById(id);
+    }
+
     public List<Ride> search(String query, String sort) {
         String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         List<Ride> result = new ArrayList<>();

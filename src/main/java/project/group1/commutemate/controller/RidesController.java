@@ -21,6 +21,7 @@ import project.group1.commutemate.model.LocationCoordinates;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideLocations;
+import project.group1.commutemate.service.NotificationService;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 
@@ -37,8 +38,9 @@ public class RidesController extends AuthenticatedController {
     public RidesController(RideService rideService,
                            RideCoordinationService coordinationService,
                            CurrentUserService currentUserService,
+                           NotificationService notificationService,
                            Clock clock) {
-        super(currentUserService);
+        super(currentUserService, notificationService);
         this.rideService = rideService;
         this.coordinationService = coordinationService;
         this.clock = clock;

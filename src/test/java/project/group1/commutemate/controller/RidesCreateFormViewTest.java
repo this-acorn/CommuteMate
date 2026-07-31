@@ -53,6 +53,9 @@ class RidesCreateFormViewTest {
     @MockitoBean
     private RideService rideService;
 
+    @MockitoBean
+    private project.group1.commutemate.service.NotificationService notificationService;
+
     @BeforeEach
     void signInDriver() {
         when(currentUserService.currentProfile()).thenReturn(Optional.of(

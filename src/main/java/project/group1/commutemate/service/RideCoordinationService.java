@@ -21,7 +21,6 @@ import project.group1.commutemate.repository.RideRequestRepository;
 /** Business rules for rider requests and driver decisions. */
 @Service
 public class RideCoordinationService {
-
     private final RideRepository rideRepository;
     private final RideRequestRepository requestRepository;
     private final Clock clock;

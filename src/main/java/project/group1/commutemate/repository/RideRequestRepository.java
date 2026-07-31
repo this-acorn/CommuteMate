@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.RideRequest;
 
 public interface RideRequestRepository extends JpaRepository<RideRequest, Long> {
@@ -26,8 +27,19 @@ public interface RideRequestRepository extends JpaRepository<RideRequest, Long> 
     @EntityGraph(attributePaths = "ride")
     List<RideRequest> findByRide_DriverEmailIgnoreCaseOrderByUpdatedAtDesc(String driverEmail);
 
+    // Epic 4: finds a driver's requests waiting on an arrival confirmation.
+    // Needed because the ride may have already departed by the time the
+    // driver clicks "Arrived", so it can no longer be found via an
+    // upcoming-only ride lookup.
+    @EntityGraph(attributePaths = "ride")
+    List<RideRequest> findByRide_DriverEmailIgnoreCaseAndStatus(String driverEmail, RequestStatus status);
+
     // Finds a ride request by its id and locks it
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select request from RideRequest request join fetch request.ride where request.id = :id")
     Optional<RideRequest> findByIdForUpdate(@Param("id") Long id);
+
+    // Epic 4: finds all requests for a ride in a given status, e.g. everyone
+    // who confirmed boarding, so the driver's arrival can complete them all.
+    List<RideRequest> findByRide_IdAndStatus(Long rideId, RequestStatus status);
 }

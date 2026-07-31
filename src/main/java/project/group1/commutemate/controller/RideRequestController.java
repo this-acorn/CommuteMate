@@ -78,4 +78,33 @@ public class RideRequestController extends AuthenticatedController {
         }
         return "redirect:/dashboard/rider";
     }
+
+    // Epic 4: post-ride workflow, step 1 — rider confirms boarding
+    @PostMapping("/ride-requests/{requestId}/board")
+    public String confirmBoarding(@PathVariable Long requestId,
+                                  RedirectAttributes redirect) {
+        Profile profile = requireCurrentProfile();
+        try {
+            coordinationService.confirmBoarding(requestId, profile);
+            redirect.addFlashAttribute("successMessage", "Boarding confirmed. Have a good ride!");
+        } catch (RideOperationException ex) {
+            redirect.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/dashboard/rider";
+    }
+
+    // Epic 4: post-ride workflow, step 2 — driver confirms arrival, which
+    // completes the ride for everyone who boarded and credits rewards
+    @PostMapping("/rides/{rideId}/arrived")
+    public String confirmArrival(@PathVariable Long rideId,
+                                 RedirectAttributes redirect) {
+        Profile profile = requireCurrentProfile();
+        try {
+            coordinationService.confirmArrival(rideId, profile);
+            redirect.addFlashAttribute("successMessage", "Ride completed. Rewards credited.");
+        } catch (RideOperationException ex) {
+            redirect.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/dashboard/driver";
+    }
 }

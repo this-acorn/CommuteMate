@@ -78,7 +78,16 @@ public class DashboardController extends AuthenticatedController {
     public String driverDashboard(Model model) {
         Profile profile = requireCurrentProfile();
         LocalDateTime now = LocalDateTime.now(clock);
-        List<Ride> myRides = rideService.findUpcomingByDriverEmail(profile.getEmail());
+        List<Ride> myRides = new java.util.ArrayList<>(
+                rideService.findUpcomingByDriverEmail(profile.getEmail()));
+        // Epic 4: a ride may have already departed by the time the driver
+        // needs to click "Arrived", so surface those too, even though
+        // they're no longer "upcoming".
+        for (Ride awaitingArrival : coordinationService.findRidesAwaitingArrival(profile.getEmail())) {
+            if (myRides.stream().noneMatch(r -> r.getId().equals(awaitingArrival.getId()))) {
+                myRides.add(awaitingArrival);
+            }
+        }
         List<RideRequest> requests = coordinationService.findRequestsForDriver(profile.getEmail());
 
         model.addAttribute("now", now);

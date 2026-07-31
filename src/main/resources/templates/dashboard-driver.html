@@ -154,6 +154,14 @@
               </span>
               <div class="ml-auto flex gap-2">
                 <a th:href="@{/rides/{id}(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">Ride details</a>
+                <!-- Epic 4: post-ride workflow, step 2. Only shown once at
+                     least one rider has confirmed boarding; the server
+                     re-checks this too. Completes the ride for everyone who
+                     boarded and credits reward points/eco-score. -->
+                <form th:if="${!r.requests.?[status.name() == 'BOARDING_CONFIRMED'].isEmpty()}"
+                      method="post" th:action="@{/rides/{id}/arrived(id=${r.id})}">
+                  <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">Arrived</button>
+                </form>
                 <form method="post" th:action="@{/rides/{id}/delete(id=${r.id})}" onsubmit="return confirm('Delete this ride and every related request?');">
                   <button type="submit" class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">Delete</button>
                 </form>

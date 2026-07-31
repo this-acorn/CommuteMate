@@ -22,6 +22,12 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     List<Ride> findByDriverEmailIgnoreCaseAndDepartAtAfterOrderByDepartAtAsc(
             String driverEmail, LocalDateTime now);
 
+    // Epic 4: all of a driver's rides regardless of time, so completed
+    // (already-departed) rides still count toward their reward total —
+    // findByDriverEmailIgnoreCaseAndDepartAtAfterOrderByDepartAtAsc above
+    // would drop a ride from the total the moment it departs.
+    List<Ride> findByDriverEmailIgnoreCase(String driverEmail);
+
     // Checks if there are any rides that depart after the given time
     boolean existsByDepartAtAfter(LocalDateTime now);
 

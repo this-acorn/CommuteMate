@@ -297,6 +297,106 @@ class RideCoordinationServiceTest {
         assertEquals("Only the ride owner can delete this ride.", error.getMessage());
     }
 
+    // --- Epic 4: post-ride workflow ---
+
+    @Test
+    void confirmBoardingMarksRequestBoardingConfirmed_withinThirtyMinuteWindow() {
+        // Ride departs 20 minutes from now — inside the 30-minute window
+        ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(20));
+        RideRequest confirmed = request(1L);
+        confirmed.setStatus(RequestStatus.CONFIRMED);
+        when(requestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(confirmed));
+        when(requestRepository.save(confirmed)).thenReturn(confirmed);
+
+        RideRequest result = service.confirmBoarding(1L, rider);
+
+        assertEquals(RequestStatus.BOARDING_CONFIRMED, result.getStatus());
+    }
+
+    @Test
+    void confirmBoardingRejectsOutsideThirtyMinuteWindow() {
+        // Ride departs in 2 hours — too early to board
+        ride.setDepartAt(LocalDateTime.now(CLOCK).plusHours(2));
+        RideRequest confirmed = request(1L);
+        confirmed.setStatus(RequestStatus.CONFIRMED);
+        when(requestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(confirmed));
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.confirmBoarding(1L, rider));
+
+        assertEquals("Boarding opens 30 minutes before departure.", error.getMessage());
+    }
+
+    @Test
+    void confirmBoardingRejectsNonPendingConfirmedRequest() {
+        ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(10));
+        RideRequest pending = request(1L); // default status is PENDING
+        when(requestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(pending));
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.confirmBoarding(1L, rider));
+
+        assertEquals("Only a confirmed request can board.", error.getMessage());
+    }
+
+    @Test
+    void confirmBoardingRejectsWrongRider() {
+        ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(10));
+        RideRequest confirmed = request(1L);
+        confirmed.setStatus(RequestStatus.CONFIRMED);
+        when(requestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(confirmed));
+
+        Profile someoneElse = new Profile("someone-else@sfu.ca", "Someone Else", Role.RIDER, 0, 0);
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.confirmBoarding(1L, someoneElse));
+
+        assertEquals("Only the rider on this request can confirm boarding.", error.getMessage());
+    }
+
+    @Test
+    void confirmArrivalCompletesEveryBoardedRequest() {
+        RideRequest boarded1 = request(1L);
+        boarded1.setStatus(RequestStatus.BOARDING_CONFIRMED);
+        RideRequest boarded2 = request(2L);
+        boarded2.setStatus(RequestStatus.BOARDING_CONFIRMED);
+
+        when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
+        when(requestRepository.findByRide_IdAndStatus(10L, RequestStatus.BOARDING_CONFIRMED))
+                .thenReturn(java.util.List.of(boarded1, boarded2));
+        when(requestRepository.saveAll(java.util.List.of(boarded1, boarded2)))
+                .thenReturn(java.util.List.of(boarded1, boarded2));
+
+        var completed = service.confirmArrival(10L, driver("driver@sfu.ca"));
+
+        assertEquals(2, completed.size());
+        assertEquals(RequestStatus.COMPLETED, boarded1.getStatus());
+        assertEquals(RequestStatus.COMPLETED, boarded2.getStatus());
+    }
+
+    @Test
+    void confirmArrivalRejectsWhenNobodyBoarded() {
+        when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
+        when(requestRepository.findByRide_IdAndStatus(10L, RequestStatus.BOARDING_CONFIRMED))
+                .thenReturn(java.util.List.of());
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.confirmArrival(10L, driver("driver@sfu.ca")));
+
+        assertEquals("No riders have confirmed boarding yet, so this ride cannot be completed.",
+                error.getMessage());
+    }
+
+    @Test
+    void confirmArrivalRejectsNonOwner() {
+        when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.confirmArrival(10L, driver("other@sfu.ca")));
+
+        assertEquals("Only the ride owner can confirm arrival for this ride.", error.getMessage());
+    }
+
     private RideRequest request(Long id) {
         RideRequest request = new RideRequest(ride, rider.getEmail(), rider.getFullName());
         request.setId(id);

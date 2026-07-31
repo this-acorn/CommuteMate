@@ -327,8 +327,8 @@ class RideCoordinationServiceTest {
         assertEquals("Boarding opens 30 minutes before departure.", error.getMessage());
     }
 
-    // Roman's review: boundary tests for the 30-minute window itself,
-    // not just "clearly inside" / "clearly outside" cases.
+    // Boundary tests for the 30-minute window itself, not just "clearly
+    // inside" / "clearly outside" cases.
     @Test
     void confirmBoardingAllowsExactlyAtThirtyMinuteBoundary() {
         // Ride departs in exactly 30 minutes — the boundary is inclusive
@@ -419,9 +419,9 @@ class RideCoordinationServiceTest {
                 error.getMessage());
     }
 
-    // Roman's review: confirmArrival() didn't check the departure time at
-    // all — a driver could complete the ride right after boarding was
-    // confirmed, well before departure actually happened.
+    // confirmArrival() didn't check the departure time at all — a driver
+    // could complete the ride right after boarding was confirmed, well
+    // before departure actually happened.
     @Test
     void confirmArrivalRejectsBeforeScheduledDeparture() {
         ride.setDepartAt(LocalDateTime.now(CLOCK).plusMinutes(20)); // hasn't departed yet

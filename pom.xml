@@ -80,6 +80,21 @@
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 
+		<!--
+			Epic 1: keep the HTTP session in the database instead of Tomcat's memory.
+			Render replaces the container on every deploy and on wake-up from an idle
+			spin-down, which used to drop every in-memory session and sign everyone out.
+
+			Must be the starter, not a bare org.springframework.session:spring-session-jdbc:
+			Boot 4 moved session auto-configuration out of spring-boot-autoconfigure into
+			its own module, so the plain library brings the classes but nothing wires them
+			up — sessions silently stay in Tomcat's memory.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-session-jdbc</artifactId>
+		</dependency>
+
 		<!-- Epic 1: bean validation for the registration form -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -93,9 +108,21 @@
 			<version>0.1.0</version>
 		</dependency>
 
+		<!--
+			H2 backs local development and the tests. Production (Render) points
+			spring.datasource.* at Postgres instead — see application.properties.
+		-->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Epic 1: the deployed database. Render's container filesystem is wiped on
+		     every restart, so accounts have to live in a managed Postgres instance. -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 

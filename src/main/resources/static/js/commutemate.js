@@ -31,6 +31,7 @@
     var modeInput = form.querySelector("input[name='mode']");
     var tabs = form.querySelectorAll("[data-mode]");
     var signupOnly = form.querySelectorAll("[data-signup-only]");
+    var loginOnly = form.querySelectorAll("[data-login-only]");
     var title = form.querySelector("[data-auth-title]");
     var subtitle = form.querySelector("[data-auth-subtitle]");
     var submitBtn = form.querySelector("[data-auth-submit]");
@@ -48,6 +49,8 @@
       });
       var signup = mode === "signup";
       signupOnly.forEach(function (el) { el.style.display = signup ? "" : "none"; });
+      // "Keep me signed in" only means anything on the login form
+      loginOnly.forEach(function (el) { el.style.display = signup ? "none" : ""; });
       if (title) title.textContent = signup ? "Create your account" : "Welcome back";
       if (subtitle) {
         subtitle.textContent = signup

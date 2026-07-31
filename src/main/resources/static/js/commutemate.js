@@ -168,10 +168,27 @@
       if (empty) empty.style.display = visible === 0 ? "" : "none";
     }
 
+    // Keep the hash on the boxes so a reload or a shared link reproduces what is
+    // on screen. Emptied boxes drop out entirely, so clearing every filter gets
+    // the bare URL back instead of resurrecting the values on the next load.
+    function syncHash() {
+      var current = new URLSearchParams();
+      Object.keys(fields).forEach(function (k) {
+        var v = fields[k] ? fields[k].value.trim() : "";
+        if (v) current.set(k, v);
+      });
+      var hash = current.toString();
+      history.replaceState(null, "", window.location.pathname
+        + window.location.search + (hash ? "#" + hash : ""));
+    }
+
     // All three boxes filter live, so the Apply button has nothing left to do and
     // submitting would only cost a round trip.
     Object.keys(fields).forEach(function (k) {
-      if (fields[k]) fields[k].addEventListener("input", apply);
+      if (fields[k]) fields[k].addEventListener("input", function () {
+        apply();
+        syncHash();
+      });
     });
     if (applyBtn) applyBtn.style.display = "none";
     if (form) form.addEventListener("submit", function (e) { e.preventDefault(); });

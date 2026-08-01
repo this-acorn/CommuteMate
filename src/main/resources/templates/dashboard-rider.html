@@ -180,23 +180,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Service alerts: still rendered when the departures feed is down. -->
-          <div th:if="${transit != null}" class="mt-4 border-t border-border pt-3">
-            <p class="text-xs font-medium text-muted-foreground">Service alerts</p>
-            <!-- The alerts feed failed on its own: don't claim there are no alerts when we could not check. -->
-            <p th:if="${!transit.alertsAvailable()}" class="mt-1 text-xs text-destructive">
-              Service alerts are temporarily unavailable.
-            </p>
-            <p th:if="${transit.alertsAvailable() and #lists.isEmpty(transit.alerts())}" class="mt-1 text-xs text-muted-foreground">
-              No alerts affecting these routes.
-            </p>
-            <div th:each="alert : ${transit.alerts()}"
-                 class="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
-              <p class="font-semibold" th:text="${alert.title()}">Service alert</p>
-              <p th:if="${!#strings.isEmpty(alert.description())}" class="mt-0.5" th:text="${alert.description()}">Details</p>
-            </div>
-          </div>
         </div>
 
         <div class="rounded-2xl border border-border bg-card p-5 card-lift">

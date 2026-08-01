@@ -125,22 +125,7 @@ class RideAuthorizationControllerTest {
             null
          );
 
-         Ride coquitlamRide = new Ride(
-            "driver2@sfu.ca",
-            "Other Driver",
-            "OD",
-            "Coquitlam Central",
-            "SFU Burnaby — Convocation Mall",
-            LocalDateTime.now().plusHours(1),
-            3,
-            0,
-            4,
-            35,
-            68,
-            "Test Car",
-            4.7,
-            null
-          );
+         
 
          when(rideService.recommended("", "Metrotown", "SFU", "Departure"))
         .thenReturn(List.of(metrotownRide));

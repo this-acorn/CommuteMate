@@ -87,7 +87,7 @@
               <p class="text-xs text-muted-foreground" th:text="${request.riderEmail}">rider@sfu.ca</p>
             </div>
             <span class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  th:classappend="${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : (${request.status.name() == 'CONFIRMED'} ? 'bg-emerald-500/10 text-emerald-800' : 'bg-secondary text-muted-foreground')"
+                  th:classappend="${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : (${request.status.name() == 'CONFIRMED' or request.status.name() == 'BOARDING_CONFIRMED' or request.status.name() == 'COMPLETED'} ? 'bg-emerald-500/10 text-emerald-800' : 'bg-secondary text-muted-foreground')"
                   th:text="${request.status.label()}">Pending</span>
           </div>
           <div class="mt-4 rounded-lg bg-secondary/60 p-3 text-sm">

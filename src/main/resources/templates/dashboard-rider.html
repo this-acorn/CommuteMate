@@ -47,7 +47,7 @@
               <p class="mt-1 text-xs text-muted-foreground" th:text="${request.ride.departDate} + ' · ' + ${request.ride.departTime}">Tomorrow · 8:00 AM</p>
             </div>
             <span class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  th:classappend="${request.status.name() == 'CONFIRMED'} ? 'bg-emerald-500/10 text-emerald-800' : (${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : 'bg-secondary text-muted-foreground')"
+                  th:classappend="${request.status.name() == 'CONFIRMED' or request.status.name() == 'BOARDING_CONFIRMED' or request.status.name() == 'COMPLETED'} ? 'bg-emerald-500/10 text-emerald-800' : (${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : 'bg-secondary text-muted-foreground')"
                   th:text="${request.status.label()}">Pending</span>
           </div>
           <p class="mt-3 text-sm text-muted-foreground" th:text="'Driver: ' + ${request.ride.driver}">Driver: Demo Driver</p>

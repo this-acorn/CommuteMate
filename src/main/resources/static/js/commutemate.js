@@ -36,7 +36,7 @@
     var subtitle = form.querySelector("[data-auth-subtitle]");
     var submitBtn = form.querySelector("[data-auth-submit]");
 
-    function setMode(mode) {
+    function setMode(mode, isUserAction) {
       modeInput.value = mode;
       // Login submits to Spring Security's form login; sign-up to /register
       form.setAttribute("action", mode === "signup" ? "/register" : "/login");
@@ -58,10 +58,19 @@
           : "Log in to see today's rides up the mountain.";
       }
       if (submitBtn) submitBtn.textContent = signup ? "Create account" : "Log in";
+
+      // Server-rendered error/success banners belong to the mode the page
+      // loaded with (e.g. a failed /login redirect); a manual tab switch
+      // leaves that state behind, so clear them instead of carrying them over.
+      if (isUserAction) {
+        form.querySelectorAll("[data-auth-alert]").forEach(function (el) {
+          el.style.display = "none";
+        });
+      }
     }
 
     tabs.forEach(function (t) {
-      t.addEventListener("click", function () { setMode(t.getAttribute("data-mode")); });
+      t.addEventListener("click", function () { setMode(t.getAttribute("data-mode"), true); });
     });
 
     // Role selector (sign-up only)

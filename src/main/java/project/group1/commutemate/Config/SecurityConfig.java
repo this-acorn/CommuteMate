@@ -14,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
@@ -40,6 +41,18 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /** Keep the entered email after a failed login; never keep the password. */
+    @Bean
+    public AuthenticationFailureHandler failureHandler() {
+        return (request, response, exception) -> {
+            String email = request.getParameter("email");
+            if (email != null) {
+                request.getSession().setAttribute("LAST_LOGIN_EMAIL", email.trim());
+            }
+            response.sendRedirect("/auth?mode=login&error");
+        };
+    }
+
     /** After login, land on the dashboard that matches the member's role. */
     @Bean
     public AuthenticationSuccessHandler successHandler() {
@@ -49,10 +62,7 @@ public class SecurityConfig {
                         : "/dashboard/rider");
     }
 
-    /**
-     * A driver-only member hitting a rider page (or vice versa) is bounced to
-     * their own dashboard instead of seeing a bare 403 page.
-     */
+    /** Return a signed-in member to the dashboard allowed for their role. */
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
         RequestMatcher chatMessageEndpoint = PathPatternRequestMatcher
@@ -60,23 +70,21 @@ public class SecurityConfig {
                 .matcher("/rides/{rideId}/chat/messages");
 
         return (request, response, exception) -> {
-            // Fetch-based chat calls must receive a real HTTP status. Redirecting
-            // to a dashboard would make JavaScript treat a rejected request as a
-            // successful HTML response.
+            // Fetch-based chat calls must receive a real HTTP status.
             if (chatMessageEndpoint.matches(request)) {
                 response.sendError(HttpStatus.FORBIDDEN.value());
                 return;
             }
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            response.sendRedirect(auth != null && hasRole(auth, "ROLE_DRIVER")
+            response.sendRedirect(hasRole(authentication, "ROLE_DRIVER")
                     ? "/dashboard/driver"
                     : "/dashboard/rider");
         };
     }
 
     private static boolean hasRole(Authentication authentication, String role) {
-        return authentication.getAuthorities().stream()
+        return authentication != null && authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role::equals);
     }
@@ -90,7 +98,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/auth", "/register", "/login",
-                        "/css/**", "/js/**", "/images/**", "/error").permitAll()
+                        "/css/**", "/js/**", "/images/**", "/error", "/error/**").permitAll()
                 // Driver features
                 .requestMatchers("/dashboard/driver", "/rides/create")
                         .hasRole("DRIVER")
@@ -101,7 +109,9 @@ public class SecurityConfig {
                         .hasRole("DRIVER")
                 .requestMatchers(HttpMethod.POST, "/rides/*/delete")
                         .hasRole("DRIVER")
-
+                // Epic 4: post-ride workflow
+                .requestMatchers(HttpMethod.POST, "/rides/*/arrived")
+                        .hasRole("DRIVER")
                 // Rider features
                 .requestMatchers("/dashboard/rider", "/rides/available")
                         .hasRole("RIDER")
@@ -109,7 +119,9 @@ public class SecurityConfig {
                         .hasRole("RIDER")
                 .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
                         .hasRole("RIDER")
-
+                // Epic 4: post-ride workflow
+                .requestMatchers(HttpMethod.POST, "/ride-requests/*/board")
+                        .hasRole("RIDER")
                 // Chat features
                 .requestMatchers(
                         "/rides/*/chat",
@@ -123,7 +135,7 @@ public class SecurityConfig {
                 .usernameParameter("email")
                 .passwordParameter("password")
                 .successHandler(successHandler())
-                .failureUrl("/auth?mode=login&error")
+                .failureHandler(failureHandler())
                 .permitAll()
             )
             // Re-authenticate the member from the remember-me cookie after the

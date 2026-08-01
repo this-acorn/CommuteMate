@@ -85,7 +85,10 @@
 
         <div th:if="${!owner and myRequest != null}" class="mt-5">
           <p class="text-xs font-medium text-muted-foreground">Your current status</p>
-          <span class="mt-2 inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-primary/10 text-primary"
+          <span class="mt-2 inline-flex rounded-full px-3 py-1 text-sm font-semibold"
+                th:classappend="${myRequest.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' :
+                                 (${myRequest.status.name() == 'CONFIRMED' or myRequest.status.name() == 'BOARDING_CONFIRMED' or myRequest.status.name() == 'COMPLETED'} ? 'bg-emerald-500/10 text-emerald-800' :
+                                 'bg-secondary text-muted-foreground')"
                 th:text="${myRequest.status.label()}">Pending</span>
         </div>
 

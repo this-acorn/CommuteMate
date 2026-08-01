@@ -40,24 +40,68 @@
         <a th:href="@{/rides/available}" class="mt-2 inline-block text-sm font-medium text-primary hover:underline">Browse available rides →</a>
       </div>
       <div class="mt-4 grid gap-3 md:grid-cols-2">
-        <article th:each="request : ${riderRequests}" class="rounded-2xl border border-border bg-card p-5 card-lift">
+        <article th:each="request : ${riderRequests}"
+                 class="rounded-2xl border border-border bg-card p-5 card-lift">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="font-semibold" th:text="${request.ride.from} + ' → ' + ${request.ride.to}">Metrotown → SFU</p>
-              <p class="mt-1 text-xs text-muted-foreground" th:text="${request.ride.departDate} + ' · ' + ${request.ride.departTime}">Tomorrow · 8:00 AM</p>
+              <p class="font-semibold"
+                 th:text="${request.ride.from} + ' → ' + ${request.ride.to}">
+                Metrotown → SFU
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground"
+                 th:text="${request.ride.departDate} + ' · ' + ${request.ride.departTime}">
+                Tomorrow · 8:00 AM
+              </p>
             </div>
             <span class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  th:classappend="${request.status.name() == 'CONFIRMED'} ? 'bg-emerald-500/10 text-emerald-800' : (${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : 'bg-secondary text-muted-foreground')"
-                  th:text="${request.status.label()}">Pending</span>
+                  th:classappend="${request.status.name() == 'CONFIRMED'
+                          or request.status.name() == 'BOARDING_CONFIRMED'
+                          or request.status.name() == 'COMPLETED'}
+                          ? 'bg-emerald-500/10 text-emerald-800'
+                          : (${request.status.name() == 'PENDING'}
+                          ? 'bg-amber-500/10 text-amber-800'
+                          : 'bg-secondary text-muted-foreground')"
+                  th:text="${request.status.label()}">
+              Pending
+            </span>
           </div>
-          <p class="mt-3 text-sm text-muted-foreground" th:text="'Driver: ' + ${request.ride.driver}">Driver: Demo Driver</p>
-          <div class="mt-4 flex items-center gap-2">
-            <a th:href="@{/rides/{id}(id=${request.ride.id})}" class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">View ride</a>
-            <a th:if="${request.status.name() == 'CONFIRMED'}"
+          <p class="mt-3 text-sm text-muted-foreground"
+             th:text="'Driver: ' + ${request.ride.driver}">
+            Driver: Demo Driver
+          </p>
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <a th:href="@{/rides/{id}(id=${request.ride.id})}"
+               class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">
+              View ride
+            </a>
+            <a th:if="${request.status.name() == 'CONFIRMED'
+                    or request.status.name() == 'BOARDING_CONFIRMED'
+                    or request.status.name() == 'COMPLETED'}"
                th:href="@{/rides/{id}/chat(id=${request.ride.id})}"
-               class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">Ride chat</a>
-            <form th:if="${(request.status.name() == 'PENDING' or request.status.name() == 'CONFIRMED') and request.ride.departAt.isAfter(now)}" method="post" th:action="@{/ride-requests/{id}/cancel(id=${request.id})}">
-              <button type="submit" class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">Cancel request</button>
+               class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">
+              Ride chat
+            </a>
+            <!-- Epic 4: post-ride workflow, step 1.
+                 Only shown once the ride is within 30 minutes of departure. -->
+            <form th:if="${request.status.name() == 'CONFIRMED'
+                    and !now.isBefore(request.ride.departAt.minusMinutes(30))}"
+                  method="post"
+                  th:action="@{/ride-requests/{id}/board(id=${request.id})}">
+
+              <button type="submit"
+                      class="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">
+                Confirm boarding
+              </button>
+            </form>
+            <form th:if="${(request.status.name() == 'PENDING'
+                    or request.status.name() == 'CONFIRMED')
+                    and request.ride.departAt.isAfter(now)}"
+                  method="post"
+                  th:action="@{/ride-requests/{id}/cancel(id=${request.id})}">
+              <button type="submit"
+                      class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                Cancel request
+              </button>
             </form>
           </div>
         </article>
@@ -182,23 +226,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Service alerts: still rendered when the departures feed is down. -->
-          <div th:if="${transit != null}" class="mt-4 border-t border-border pt-3">
-            <p class="text-xs font-medium text-muted-foreground">Service alerts</p>
-            <!-- The alerts feed failed on its own: don't claim there are no alerts when we could not check. -->
-            <p th:if="${!transit.alertsAvailable()}" class="mt-1 text-xs text-destructive">
-              Service alerts are temporarily unavailable.
-            </p>
-            <p th:if="${transit.alertsAvailable() and #lists.isEmpty(transit.alerts())}" class="mt-1 text-xs text-muted-foreground">
-              No alerts affecting these routes.
-            </p>
-            <div th:each="alert : ${transit.alerts()}"
-                 class="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
-              <p class="font-semibold" th:text="${alert.title()}">Service alert</p>
-              <p th:if="${!#strings.isEmpty(alert.description())}" class="mt-0.5" th:text="${alert.description()}">Details</p>
             </div>
           </div>
         </div>

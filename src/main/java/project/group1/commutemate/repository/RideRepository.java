@@ -22,6 +22,10 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     List<Ride> findByDriverEmailIgnoreCaseAndDepartAtAfterOrderByDepartAtAsc(
             String driverEmail, LocalDateTime now);
 
+    // All rides regardless of time (for reward totals). JOIN FETCH avoids N+1.
+    @Query("select distinct r from Ride r left join fetch r.requests where lower(r.driverEmail) = lower(:driverEmail)")
+    List<Ride> findByDriverEmailIgnoreCase(@Param("driverEmail") String driverEmail);
+
     // Checks if there are any rides that depart after the given time
     boolean existsByDepartAtAfter(LocalDateTime now);
 

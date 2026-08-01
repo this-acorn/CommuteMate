@@ -52,7 +52,7 @@ public class RidesController extends AuthenticatedController {
                         @RequestParam(required = false, defaultValue = "Departure") String sort,
                         Model model) {
 
-    List<Ride> rides = rideService.recommended(query, departure, destination);
+    List<Ride> rides = rideService.recommended(query, departure, destination, sort);
 
     model.addAttribute("rides", rides);
     model.addAttribute("query", query == null ? "" : query);

@@ -142,7 +142,7 @@ class RideAuthorizationControllerTest {
             null
           );
 
-         when(rideService.recommended("", "Metrotown", "SFU"))
+         when(rideService.recommended("", "Metrotown", "SFU", "Departure"))
         .thenReturn(List.of(metrotownRide));
 
          mockMvc.perform(get("/rides/available")
@@ -155,7 +155,7 @@ class RideAuthorizationControllerTest {
             .andExpect(model().attribute("sort", "Departure"))
             .andExpect(model().attribute("rides", List.of(metrotownRide)));
 
-          verify(rideService).recommended("", "Metrotown", "SFU");
+          verify(rideService).recommended("", "Metrotown", "SFU", "Departure");
 }
 
 }

@@ -58,7 +58,7 @@ public class RideService {
         return result;
     }
 
-    public List<Ride> recommended(String query, String departure, String destination) {
+    public List<Ride> recommended(String query, String departure, String destination, String sort) {
     String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
     String dep = departure == null ? "" : departure.trim().toLowerCase(Locale.ROOT);
     String dest = destination == null ? "" : destination.trim().toLowerCase(Locale.ROOT);
@@ -83,12 +83,16 @@ public class RideService {
         }
     }
 
+    if (sort != null && !"Departure".equals(sort)) {
+    result.sort(comparatorFor(sort));
+    } else {
     result.sort(Comparator
             .comparingInt(Ride::getSeatsLeft).reversed()
             .thenComparingInt(Ride::getEcoScore).reversed()
             .thenComparingDouble(Ride::getRating).reversed()
             .thenComparingInt(Ride::getPrice)
             .thenComparing(Ride::getDepartAt));
+}
 
     return result;
 }

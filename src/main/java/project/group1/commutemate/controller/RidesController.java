@@ -133,7 +133,6 @@ public class RidesController extends AuthenticatedController {
                          @RequestParam(defaultValue = "3") int seats,
                          @RequestParam(defaultValue = "4") int price,
                          @RequestParam(required = false) String notes,
-                         Model model,
                          RedirectAttributes redirect) {
         Profile profile = requireCurrentProfile();
         try {
@@ -143,11 +142,11 @@ public class RidesController extends AuthenticatedController {
             redirect.addFlashAttribute("successMessage", "Ride published successfully.");
             return "redirect:/dashboard/driver";
         } catch (DateTimeParseException ex) {
-            return createFormWithError(model, from, to, date, time, seats, price, notes,
+            return redirectCreateFormWithError(redirect, from, to, date, time, seats, price, notes,
                     "Enter a valid departure date and time.", "date", "time");
         } catch (RideOperationException ex) {
-            return createFormWithError(model, from, to, date, time, seats, price, notes,
-                    ex.getMessage(), fieldsForCreateError(ex.getMessage()));
+            return redirectCreateFormWithError(redirect, from, to, date, time, seats, price, notes,
+                    ex.getMessage(), fieldsForCreateError(ex));
         }
     }
 
@@ -170,52 +169,41 @@ public class RidesController extends AuthenticatedController {
         }
     }
 
-    private String createFormWithError(Model model,
-                                       String from,
-                                       String to,
-                                       String date,
-                                       String time,
-                                       int seats,
-                                       int price,
-                                       String notes,
-                                       String message,
-                                       String... fields) {
-        model.addAttribute("formFrom", from);
-        model.addAttribute("formTo", to);
-        model.addAttribute("formDate", date);
-        model.addAttribute("formTime", time);
-        model.addAttribute("formSeats", seats);
-        model.addAttribute("formPrice", price);
-        model.addAttribute("formNotes", notes == null ? "" : notes);
-        model.addAttribute("errorMessage", message);
+    private String redirectCreateFormWithError(RedirectAttributes redirect,
+                                               String from,
+                                               String to,
+                                               String date,
+                                               String time,
+                                               int seats,
+                                               int price,
+                                               String notes,
+                                               String message,
+                                               String... fields) {
+        redirect.addFlashAttribute("formFrom", from);
+        redirect.addFlashAttribute("formTo", to);
+        redirect.addFlashAttribute("formDate", date);
+        redirect.addFlashAttribute("formTime", time);
+        redirect.addFlashAttribute("formSeats", seats);
+        redirect.addFlashAttribute("formPrice", price);
+        redirect.addFlashAttribute("formNotes", notes == null ? "" : notes);
+        redirect.addFlashAttribute("errorMessage", message);
 
         Map<String, String> fieldErrors = new LinkedHashMap<>();
         for (String field : fields) {
             fieldErrors.put(field, message);
         }
-        model.addAttribute("fieldErrors", fieldErrors);
-        populateCreateForm(model);
-        return "rides-create";
+        redirect.addFlashAttribute("fieldErrors", fieldErrors);
+        return "redirect:/rides/create";
     }
 
-    private String[] fieldsForCreateError(String message) {
-        if (message == null) {
-            return new String[0];
-        }
-        if (message.startsWith("Pickup and destination")
-                || message.startsWith("Choose a pickup and destination")) {
-            return new String[]{"from", "to"};
-        }
-        if (message.startsWith("Departure")) {
-            return new String[]{"date", "time"};
-        }
-        if (message.startsWith("Seats")) {
-            return new String[]{"seats"};
-        }
-        if (message.startsWith("Price")) {
-            return new String[]{"price"};
-        }
-        return new String[0];
+    private String[] fieldsForCreateError(RideOperationException exception) {
+        return switch (exception.getErrorCode()) {
+            case LOCATION_REQUIRED, SAME_ROUTE -> new String[]{"from", "to"};
+            case DEPARTURE_INVALID -> new String[]{"date", "time"};
+            case SEATS_INVALID -> new String[]{"seats"};
+            case PRICE_INVALID -> new String[]{"price"};
+            default -> new String[0];
+        };
     }
 
     // delete rides

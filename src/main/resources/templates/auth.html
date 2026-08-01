@@ -15,7 +15,7 @@
     <div class="card-lift rounded-2xl border border-border bg-card p-8">
       <form method="post" th:action="${mode == 'signup'} ? @{/register} : @{/login}" data-auth-form="data-auth-form">
         <input type="hidden" name="mode" th:value="${mode}" />
-        <input type="hidden" name="role" th:value="${selectedRole != null ? selectedRole : 'rider'}" />
+        <input type="hidden" name="role" th:value="${selectedRole != null ? selectedRole : ''}" />
 
         <div class="mb-6 grid grid-cols-2 rounded-lg bg-secondary p-1">
           <button type="button" data-mode="login" class="rounded-md px-3 py-2 text-sm font-medium transition-colors"
@@ -62,16 +62,15 @@
 
           <div class="space-y-1.5" data-signup-only="data-signup-only" style="display:none;">
             <span class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">I want to</span>
-            <!-- Rider is highlighted because it is what the hidden role input above
-                 defaults to: without a visibly selected button, someone who means to
-                 sign up as a driver has no cue that they still have to pick. -->
             <div class="grid grid-cols-2 gap-2">
               <button type="button" data-role="rider"
                       class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors"
-                      th:classappend="${selectedRole == 'driver'} ? ' border-border bg-background hover:bg-secondary' : ' border-primary bg-primary/10 text-primary'">rider</button>
+                      th:classappend="${selectedRole == 'rider'} ? ' border-primary bg-primary/10 text-primary' : ' border-border bg-background hover:bg-secondary'"
+                      th:attr="aria-pressed=${selectedRole == 'rider'}">rider</button>
               <button type="button" data-role="driver"
                       class="rounded-lg border px-3 py-2.5 text-sm font-medium capitalize transition-colors"
-                      th:classappend="${selectedRole == 'driver'} ? ' border-primary bg-primary/10 text-primary' : ' border-border bg-background hover:bg-secondary'">driver</button>
+                      th:classappend="${selectedRole == 'driver'} ? ' border-primary bg-primary/10 text-primary' : ' border-border bg-background hover:bg-secondary'"
+                      th:attr="aria-pressed=${selectedRole == 'driver'}">driver</button>
             </div>
             <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('role')}"
                th:text="${fieldErrors.get('role')}">Role error</p>

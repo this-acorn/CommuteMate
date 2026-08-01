@@ -46,7 +46,7 @@ public class RegisterController {
             model.addAttribute("error", bindingResult.getAllErrors().get(0).getDefaultMessage());
             model.addAttribute("fullName", registerRequest.getFullName());
             model.addAttribute("email", registerRequest.getEmail());
-            model.addAttribute("selectedRole", normalizeRole(registerRequest.getRole()));
+            model.addAttribute("selectedRole", selectedRoleOrEmpty(registerRequest.getRole()));
             model.addAttribute("fieldErrors", fieldErrors(bindingResult));
             return "auth";
         }
@@ -70,7 +70,13 @@ public class RegisterController {
         return errors;
     }
 
-    private String normalizeRole(String role) {
-        return role != null && "driver".equalsIgnoreCase(role) ? "driver" : "rider";
+    private String selectedRoleOrEmpty(String role) {
+        if (role == null) {
+            return "";
+        }
+        String normalized = role.trim().toLowerCase(Locale.ROOT);
+        return "rider".equals(normalized) || "driver".equals(normalized)
+                ? normalized
+                : "";
     }
 }

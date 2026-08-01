@@ -4,11 +4,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -59,15 +59,19 @@ public class SecurityConfig {
                         : "/dashboard/rider");
     }
 
-    /** Render the custom 403 page when a signed-in user lacks permission. */
+    /** Return a signed-in member to the dashboard allowed for their role. */
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
-        return (request, response, exception) ->
-                response.sendError(HttpStatus.FORBIDDEN.value());
+        return (request, response, exception) -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            response.sendRedirect(hasRole(authentication, "ROLE_DRIVER")
+                    ? "/dashboard/driver"
+                    : "/dashboard/rider");
+        };
     }
 
     private static boolean hasRole(Authentication authentication, String role) {
-        return authentication.getAuthorities().stream()
+        return authentication != null && authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role::equals);
     }

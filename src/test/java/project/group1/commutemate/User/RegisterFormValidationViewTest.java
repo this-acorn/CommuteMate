@@ -1,7 +1,11 @@
 package project.group1.commutemate.User;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -56,4 +60,60 @@ class RegisterFormValidationViewTest {
         // Passwords are deliberately not put back into the HTML after an error.
         assertFalse(html.contains("value=\"123\""));
     }
+
+    @Test
+    void missingRoleLeavesBothRoleButtonsUnselected() throws Exception {
+        when(userRepository.findByEmailIgnoreCase("alex@sfu.ca")).thenReturn(Optional.empty());
+
+        String html = mockMvc.perform(post("/register")
+                        .param("fullName", "Alex Chen")
+                        .param("email", "alex@sfu.ca")
+                        .param("password", "Password123")
+                        .param("role", ""))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth"))
+                .andExpect(model().attribute("selectedRole", ""))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertTrue(html.contains("Please select whether you are a rider or driver"));
+        assertTrue(html.contains("name=\"role\" value=\"\""));
+        assertEquals(2, occurrences(html, "aria-pressed=\"false\""));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+
+    @Test
+    void invalidRoleLeavesBothRoleButtonsUnselected() throws Exception {
+        when(userRepository.findByEmailIgnoreCase("alex@sfu.ca")).thenReturn(Optional.empty());
+
+        String html = mockMvc.perform(post("/register")
+                        .param("fullName", "Alex Chen")
+                        .param("email", "alex@sfu.ca")
+                        .param("password", "Password123")
+                        .param("role", "both"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth"))
+                .andExpect(model().attribute("selectedRole", ""))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertTrue(html.contains("Role must be rider or driver"));
+        assertTrue(html.contains("name=\"role\" value=\"\""));
+        assertEquals(2, occurrences(html, "aria-pressed=\"false\""));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    private static int occurrences(String text, String fragment) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(fragment, index)) >= 0) {
+            count++;
+            index += fragment.length();
+        }
+        return count;
+    }
+
 }

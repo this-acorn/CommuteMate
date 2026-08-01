@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import project.group1.commutemate.exception.RideOperationException;
+import project.group1.commutemate.exception.RideOperationException.ErrorCode;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.repository.RideRepository;
 
@@ -57,6 +58,7 @@ class RideServiceTest {
                         "Metrotown Station", "SFU Residence",
                         LocalDateTime.now(CLOCK).minusMinutes(1), 3, 4, null));
 
+        assertEquals(ErrorCode.DEPARTURE_INVALID, error.getErrorCode());
         assertEquals("Departure must be in the future.", error.getMessage());
     }
 
@@ -66,6 +68,7 @@ class RideServiceTest {
                 () -> service.create("driver@sfu.ca", "Demo Driver", "My House", "SFU Residence",
                         LocalDateTime.now(CLOCK).plusDays(1), 3, 4, null));
 
+        assertEquals(ErrorCode.LOCATION_REQUIRED, error.getErrorCode());
         assertEquals("Choose a pickup and destination from the list.", error.getMessage());
     }
 
@@ -76,6 +79,7 @@ class RideServiceTest {
                         "SFU Residence", "SFU Residence",
                         LocalDateTime.now(CLOCK).plusDays(1), 3, 4, null));
 
+        assertEquals(ErrorCode.SAME_ROUTE, error.getErrorCode());
         assertEquals("Pickup and destination must be different.", error.getMessage());
     }
 }

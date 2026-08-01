@@ -498,6 +498,9 @@
     margin-block-start: calc(calc(var(--spacing) * 6) * var(--tw-space-y-reverse));
     margin-block-end: calc(calc(var(--spacing) * 6) * calc(1 - var(--tw-space-y-reverse)));
   }
+  .rounded {
+    border-radius: 0.25rem;
+  }
   .rounded-2xl {
     border-radius: calc(var(--radius) + 8px);
   }
@@ -1228,6 +1231,9 @@
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
   }
 }
 @property --tw-translate-x {

@@ -142,7 +142,7 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     /* Copy reads as copy: hovering text shows the arrow, not a selection I-beam.
        Links keep their pointer (the UA rule targets them directly, so it wins
-       over this inherited value) and .cursor-pointer still opts buttons in. */
+       over this inherited value) and the button rule below re-arms buttons. */
     cursor: default;
   }
   /* cursor inherits, so the typing caret has to be asked for explicitly. */
@@ -150,6 +150,9 @@
   input[type="search"], input[type="number"], input[type="tel"],
   input[type="url"], textarea { cursor: text; }
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  /* Browsers only give links a pointer, so every button had to opt in by hand and
+     most were missed. Disabled ones keep the not-allowed cursor. */
+  button:not(:disabled) { cursor: pointer; }
 }
 
 @utility bg-mountain-gradient {

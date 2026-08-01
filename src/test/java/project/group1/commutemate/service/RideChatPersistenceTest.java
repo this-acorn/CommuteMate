@@ -1,6 +1,7 @@
 package project.group1.commutemate.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import project.group1.commutemate.exception.RideChatNotFoundException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
@@ -69,5 +71,10 @@ class RideChatPersistenceTest {
                 .findTop100ByRide_IdOrderByIdDesc(ride.getId()).isEmpty());
         assertTrue(requestRepository
                 .findByRideIdAndRiderEmailIgnoreCase(ride.getId(), "rider@sfu.ca").isEmpty());
+
+        entityManager.clear();
+        RideChatNotFoundException error = assertThrows(RideChatNotFoundException.class,
+                () -> chatService.openChat(ride.getId(), rider));
+        assertEquals("Ride not found.", error.getMessage());
     }
 }

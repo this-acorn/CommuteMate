@@ -130,7 +130,7 @@ class RideChatServiceTest {
     }
 
     @Test
-    void pendingOrUnrelatedRiderCannotOpenChat() {
+    void pendingRiderCannotOpenChat() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
         when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
                 10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
@@ -144,7 +144,41 @@ class RideChatServiceTest {
     }
 
     @Test
-    void sendMessageUsesSignedInIdentityAndTrimsBody() {
+    void unrelatedMemberCannotOpenChatOrReadMessages() {
+        Profile unrelatedMember = new Profile(
+                "outsider@sfu.ca", "Outside Member", Role.RIDER, 0, 0);
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
+                10L, "outsider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
+
+        RideChatAccessException error = assertThrows(RideChatAccessException.class,
+                () -> service.openChat(10L, unrelatedMember));
+
+        assertEquals("Only the ride owner and confirmed riders can access this chat.",
+                error.getMessage());
+        verify(messageRepository, never()).findTop100ByRide_IdOrderByIdDesc(10L);
+    }
+
+    @Test
+    void confirmedRiderCanSendMessageUnderAuthenticatedIdentity() {
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
+                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(true);
+        when(messageRepository.save(any(RideMessage.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        RideMessage saved = service.sendMessage(
+                10L, rider, "I am waiting at the east entrance.");
+
+        assertEquals("rider@sfu.ca", saved.getSenderEmail());
+        assertEquals("Demo Rider", saved.getSenderName());
+        assertEquals("I am waiting at the east entrance.", saved.getBody());
+        assertEquals(ride, saved.getRide());
+        assertTrue(ride.getMessages().contains(saved));
+    }
+
+    @Test
+    void messageBodyIsTrimmedBeforeSaving() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
         when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
                 10L, "RIDER@SFU.CA", RequestStatus.CONFIRMED)).thenReturn(true);
@@ -154,11 +188,11 @@ class RideChatServiceTest {
                 "  RIDER@SFU.CA  ", "  Demo Rider  ", Role.RIDER, 0, 0);
 
         RideMessage saved = service.sendMessage(
-                10L, signedInRider, "  I am waiting by the library.  ");
+                10L, signedInRider, "  I will arrive at 8:10 AM.  ");
 
         assertEquals("rider@sfu.ca", saved.getSenderEmail());
         assertEquals("Demo Rider", saved.getSenderName());
-        assertEquals("I am waiting by the library.", saved.getBody());
+        assertEquals("I will arrive at 8:10 AM.", saved.getBody());
         assertEquals(ride, saved.getRide());
         assertTrue(ride.getMessages().contains(saved));
     }
@@ -180,6 +214,21 @@ class RideChatServiceTest {
         assertEquals(51L, messages.getFirst().id());
         assertEquals("I am outside.", messages.getFirst().body());
         assertTrue(messages.getFirst().mine());
+        verifyNoInteractions(requestRepository);
+    }
+
+    @Test
+    void pollingAfterAlreadyDisplayedMessageReturnsNoDuplicate() {
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(messageRepository
+                .findTop100ByRide_IdAndIdGreaterThanOrderByIdAsc(10L, 51L))
+                .thenReturn(List.of());
+
+        var messages = service.loadMessagesAfter(10L, driver, 51L);
+
+        assertTrue(messages.isEmpty());
+        verify(messageRepository)
+                .findTop100ByRide_IdAndIdGreaterThanOrderByIdAsc(10L, 51L);
         verifyNoInteractions(requestRepository);
     }
 
@@ -222,6 +271,21 @@ class RideChatServiceTest {
     }
 
     @Test
+    void riderWhoseRequestIsNoLongerConfirmedCannotSendMessage() {
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
+                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
+
+        RideChatAccessException error = assertThrows(RideChatAccessException.class,
+                () -> service.sendMessage(10L, rider, "I am outside."));
+
+        assertEquals("Only the ride owner and confirmed riders can access this chat.",
+                error.getMessage());
+        assertTrue(ride.getMessages().isEmpty());
+        verify(messageRepository, never()).save(any(RideMessage.class));
+    }
+
+    @Test
     void confirmedRiderMessageIsMarkedAsMineWhenChatReloads() {
         RideMessage message = new RideMessage(
                 ride, "rider@sfu.ca", "Demo Rider", "On my way.");
@@ -238,5 +302,22 @@ class RideChatServiceTest {
         ArgumentCaptor<Long> rideId = ArgumentCaptor.forClass(Long.class);
         verify(messageRepository).findTop100ByRide_IdOrderByIdDesc(rideId.capture());
         assertEquals(10L, rideId.getValue());
+    }
+
+    @Test
+    void driverSeesRiderNameAndEmailWithoutMineLabel() {
+        RideMessage message = new RideMessage(
+                ride, "rider@sfu.ca", "Demo Rider", "I am at the pickup point.");
+        message.setId(60L);
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
+                .thenReturn(List.of(message));
+
+        RideChatView chat = service.openChat(10L, driver);
+
+        assertEquals("Demo Rider", chat.messages().getFirst().senderName());
+        assertEquals("rider@sfu.ca", chat.messages().getFirst().senderEmail());
+        assertFalse(chat.messages().getFirst().mine());
+        verifyNoInteractions(requestRepository);
     }
 }

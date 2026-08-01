@@ -66,7 +66,8 @@ class RideChatSecurityTest {
                 .thenReturn(new RideChatView(ride, List.of(), false));
 
         mockMvc.perform(get("/rides/{rideId}/chat", 10L)
-                        .with(user("rider@sfu.ca").roles("RIDER")))
+                        .with(user("rider@sfu.ca").roles("RIDER"))
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"_csrf\"")));
     }
@@ -75,6 +76,17 @@ class RideChatSecurityTest {
     void unauthenticatedPollingReturnsUnauthorizedInsteadOfLoginHtml() throws Exception {
         mockMvc.perform(get("/rides/{rideId}/chat/messages", 10L)
                         .header("Accept", "application/json"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(chatService);
+    }
+
+    @Test
+    void unauthenticatedMessagePostReturnsUnauthorizedInsteadOfLoginHtml() throws Exception {
+        mockMvc.perform(post("/rides/{rideId}/chat/messages", 10L)
+                        .with(csrf())
+                        .header("Accept", "text/plain")
+                        .param("message", "Hello"))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(chatService);

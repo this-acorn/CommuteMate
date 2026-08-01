@@ -1,5 +1,6 @@
 package project.group1.commutemate.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
@@ -77,6 +78,30 @@ class RideChatControllerTest {
     }
 
     @Test
+    void ownerChatPageIdentifiesMemberAsDriver() throws Exception {
+        Profile driver = new Profile(
+                "driver@sfu.ca", "Demo Driver", Role.DRIVER, 0, 0);
+        when(currentUserService.currentProfile()).thenReturn(Optional.of(driver));
+        when(chatService.openChat(10L, driver))
+                .thenReturn(new RideChatView(ride, List.of(), true));
+
+        mockMvc.perform(get("/rides/{rideId}/chat", 10L))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(">Driver</span>")));
+    }
+
+    @Test
+    void confirmedRiderChatPageIdentifiesMemberAsConfirmedRider() throws Exception {
+        when(chatService.openChat(10L, profile))
+                .thenReturn(new RideChatView(ride, List.of(), false));
+
+        mockMvc.perform(get("/rides/{rideId}/chat", 10L))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        containsString(">Confirmed rider</span>")));
+    }
+
+    @Test
     void unauthorizedChatAccessRedirectsToRideDetails() throws Exception {
         when(chatService.openChat(10L, profile)).thenThrow(new RideChatAccessException(
                 "Only the ride owner and confirmed riders can access this chat."));
@@ -86,6 +111,17 @@ class RideChatControllerTest {
                 .andExpect(redirectedUrl("/rides/10"))
                 .andExpect(flash().attribute("errorMessage",
                         "Only the ride owner and confirmed riders can access this chat."));
+    }
+
+    @Test
+    void missingRideChatRedirectsWithRideNotFoundError() throws Exception {
+        when(chatService.openChat(99L, profile))
+                .thenThrow(new RideChatNotFoundException("Ride not found."));
+
+        mockMvc.perform(get("/rides/{rideId}/chat", 99L))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/rides/99"))
+                .andExpect(flash().attribute("errorMessage", "Ride not found."));
     }
 
     @Test
@@ -103,6 +139,37 @@ class RideChatControllerTest {
                 .andExpect(jsonPath("$[0].body").value("I am outside."));
 
         verify(chatService).loadMessagesAfter(10L, profile, 50L);
+    }
+
+    @Test
+    void repeatedPollingAfterLastDisplayedMessageReturnsEmptyArray() throws Exception {
+        when(chatService.loadMessagesAfter(10L, profile, 51L))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/rides/{rideId}/chat/messages", 10L)
+                        .param("after", "51"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
+        verify(chatService).loadMessagesAfter(10L, profile, 51L);
+    }
+
+    @Test
+    void driverSeesRiderIdentityAndMessageIsNotLabelledYou() throws Exception {
+        Profile driver = new Profile(
+                "driver@sfu.ca", "Demo Driver", Role.DRIVER, 0, 0);
+        RideMessageView riderMessage = new RideMessageView(
+                61L, "rider@sfu.ca", "Demo Rider", "I am at the pickup point.",
+                "Jul 29, 2:15 PM", false);
+        when(currentUserService.currentProfile()).thenReturn(Optional.of(driver));
+        when(chatService.openChat(10L, driver))
+                .thenReturn(new RideChatView(ride, List.of(riderMessage), true));
+
+        mockMvc.perform(get("/rides/{rideId}/chat", 10L))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-message-id=\"61\"")))
+                .andExpect(content().string(containsString(">Demo Rider</p>")))
+                .andExpect(content().string(containsString(">rider@sfu.ca</p>")));
     }
 
     @Test

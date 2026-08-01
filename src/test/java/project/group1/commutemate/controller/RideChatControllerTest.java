@@ -36,6 +36,7 @@ import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideChatView;
 import project.group1.commutemate.model.RideMessageView;
 import project.group1.commutemate.model.Role;
+import project.group1.commutemate.service.NotificationService;
 import project.group1.commutemate.service.RideChatService;
 
 @WebMvcTest(controllers = RideChatController.class)
@@ -50,6 +51,9 @@ class RideChatControllerTest {
 
     @MockitoBean
     private RideChatService chatService;
+
+    @MockitoBean
+    private NotificationService notificationService;
 
     private Profile profile;
     private Ride ride;

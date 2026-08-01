@@ -43,6 +43,10 @@ class RideChatServiceTest {
     private static final ZoneId VANCOUVER = ZoneId.of("America/Vancouver");
     private static final Clock CLOCK = Clock.fixed(
             Instant.parse("2026-07-23T08:00:00Z"), VANCOUVER);
+    private static final List<RequestStatus> CHAT_ACCESS_STATUSES = List.of(
+            RequestStatus.CONFIRMED,
+            RequestStatus.BOARDING_CONFIRMED,
+            RequestStatus.COMPLETED);
 
     @Mock
     private RideRepository rideRepository;
@@ -115,8 +119,8 @@ class RideChatServiceTest {
     @Test
     void confirmedRiderCanOpenRideChat() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(true);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "rider@sfu.ca", CHAT_ACCESS_STATUSES)).thenReturn(true);
         when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
                 .thenReturn(List.of(new RideMessage(
                         ride, "driver@sfu.ca", "Demo Driver", "Meet at the east entrance.")));
@@ -132,8 +136,8 @@ class RideChatServiceTest {
     @Test
     void pendingRiderCannotOpenChat() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "rider@sfu.ca", CHAT_ACCESS_STATUSES)).thenReturn(false);
 
         RideChatAccessException error = assertThrows(RideChatAccessException.class,
                 () -> service.openChat(10L, rider));
@@ -148,8 +152,8 @@ class RideChatServiceTest {
         Profile unrelatedMember = new Profile(
                 "outsider@sfu.ca", "Outside Member", Role.RIDER, 0, 0);
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "outsider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "outsider@sfu.ca", CHAT_ACCESS_STATUSES)).thenReturn(false);
 
         RideChatAccessException error = assertThrows(RideChatAccessException.class,
                 () -> service.openChat(10L, unrelatedMember));
@@ -162,8 +166,8 @@ class RideChatServiceTest {
     @Test
     void confirmedRiderCanSendMessageUnderAuthenticatedIdentity() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(true);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "rider@sfu.ca", CHAT_ACCESS_STATUSES)).thenReturn(true);
         when(messageRepository.save(any(RideMessage.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -180,8 +184,8 @@ class RideChatServiceTest {
     @Test
     void messageBodyIsTrimmedBeforeSaving() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "RIDER@SFU.CA", RequestStatus.CONFIRMED)).thenReturn(true);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "RIDER@SFU.CA", CHAT_ACCESS_STATUSES)).thenReturn(true);
         when(messageRepository.save(any(RideMessage.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         Profile signedInRider = new Profile(
@@ -235,8 +239,8 @@ class RideChatServiceTest {
     @Test
     void pendingRiderCannotPollMessages() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "rider@sfu.ca", CHAT_ACCESS_STATUSES)).thenReturn(false);
 
         RideChatAccessException error = assertThrows(RideChatAccessException.class,
                 () -> service.loadMessagesAfter(10L, rider, 50L));
@@ -273,8 +277,8 @@ class RideChatServiceTest {
     @Test
     void riderWhoseRequestIsNoLongerConfirmedCannotSendMessage() {
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(false);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "rider@sfu.ca", CHAT_ACCESS_STATUSES)).thenReturn(false);
 
         RideChatAccessException error = assertThrows(RideChatAccessException.class,
                 () -> service.sendMessage(10L, rider, "I am outside."));
@@ -291,8 +295,8 @@ class RideChatServiceTest {
                 ride, "rider@sfu.ca", "Demo Rider", "On my way.");
         message.setId(50L);
         when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
-        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                10L, "rider@sfu.ca", RequestStatus.CONFIRMED)).thenReturn(true);
+        when(requestRepository.existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                10L, "rider@sfu.ca", CHAT_ACCESS_STATUSES)).thenReturn(true);
         when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
                 .thenReturn(List.of(message));
 

@@ -30,6 +30,11 @@ public class RideChatService {
     public static final int MAX_MESSAGE_LENGTH = 1000;
     public static final int MESSAGE_BATCH_SIZE = 100;
 
+    private static final List<RequestStatus> CHAT_ACCESS_STATUSES = List.of(
+            RequestStatus.CONFIRMED,
+            RequestStatus.BOARDING_CONFIRMED,
+            RequestStatus.COMPLETED);
+
     private static final DateTimeFormatter MESSAGE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.ENGLISH);
 
@@ -117,8 +122,8 @@ public class RideChatService {
         }
 
         boolean confirmedRider = requestRepository
-                .existsByRide_IdAndRiderEmailIgnoreCaseAndStatus(
-                        ride.getId(), email, RequestStatus.CONFIRMED);
+                .existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+                        ride.getId(), email, CHAT_ACCESS_STATUSES);
         if (!confirmedRider) {
             throw new RideChatAccessException(
                     "Only the ride owner and confirmed riders can access this chat.");

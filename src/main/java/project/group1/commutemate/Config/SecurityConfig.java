@@ -77,7 +77,7 @@ public class SecurityConfig {
             }
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            response.sendRedirect(hasRole(authentication, "ROLE_DRIVER")
+            response.sendRedirect(hasRole(auth, "ROLE_DRIVER")
                     ? "/dashboard/driver"
                     : "/dashboard/rider");
         };

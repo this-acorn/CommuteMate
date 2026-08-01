@@ -21,6 +21,7 @@ import project.group1.commutemate.exception.RideOperationException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RideChatView;
 import project.group1.commutemate.model.RideMessageView;
+import project.group1.commutemate.service.NotificationService;
 import project.group1.commutemate.service.RideChatService;
 
 /** Web endpoints for the persistent conversation attached to a ride. */
@@ -30,8 +31,9 @@ public class RideChatController extends AuthenticatedController {
     private final RideChatService chatService;
 
     public RideChatController(RideChatService chatService,
-                              CurrentUserService currentUserService) {
-        super(currentUserService);
+                              CurrentUserService currentUserService,
+                              NotificationService notificationService) {
+        super(currentUserService, notificationService);
         this.chatService = chatService;
     }
 

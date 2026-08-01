@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.persistence.EntityManager;
 
@@ -42,6 +43,28 @@ class RideChatPersistenceTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Test
+    void ridersKeepChatAccessAfterBoardingAndCompletion() {
+        for (RequestStatus status : List.of(
+                RequestStatus.BOARDING_CONFIRMED, RequestStatus.COMPLETED)) {
+            Ride ride = rideRepository.save(new Ride(
+                    "driver-" + status.name().toLowerCase() + "@sfu.ca",
+                    "Demo Driver", "DD", "Metrotown", "SFU Burnaby",
+                    LocalDateTime.now().plusDays(2), 3, 1, 4, 20, 80,
+                    "Test car", 5.0, null));
+            RideRequest request = new RideRequest(ride, "rider@sfu.ca", "Demo Rider");
+            request.setStatus(status);
+            requestRepository.saveAndFlush(request);
+
+            Profile rider = new Profile(
+                    "rider@sfu.ca", "Demo Rider", Role.RIDER, 0, 0);
+
+            RideChatView chat = chatService.openChat(ride.getId(), rider);
+
+            assertEquals(ride.getId(), chat.ride().getId());
+        }
+    }
 
     @Test
     void confirmedRiderMessagePersistsAndRideDeletionRemovesConversation() {

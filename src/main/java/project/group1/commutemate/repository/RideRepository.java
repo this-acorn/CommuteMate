@@ -22,13 +22,7 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     List<Ride> findByDriverEmailIgnoreCaseAndDepartAtAfterOrderByDepartAtAsc(
             String driverEmail, LocalDateTime now);
 
-    // All of a driver's rides regardless of time, so completed
-    // (already-departed) rides still count toward their reward total —
-    // findByDriverEmailIgnoreCaseAndDepartAtAfterOrderByDepartAtAsc above
-    // would drop a ride from the total the moment it departs.
-    // JOIN FETCH avoids an N+1 query: RewardService reads ride.getRequests()
-    // for every ride returned here, which would otherwise be a separate
-    // query per ride. LEFT JOIN so rides with no requests yet still appear.
+    // All rides regardless of time (for reward totals). JOIN FETCH avoids N+1.
     @Query("select distinct r from Ride r left join fetch r.requests where lower(r.driverEmail) = lower(:driverEmail)")
     List<Ride> findByDriverEmailIgnoreCase(@Param("driverEmail") String driverEmail);
 

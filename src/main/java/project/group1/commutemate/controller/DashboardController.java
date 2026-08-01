@@ -50,8 +50,7 @@ public class DashboardController extends AuthenticatedController {
         Profile profile = requireCurrentProfile();
         LocalDateTime now = LocalDateTime.now(clock);
         List<RideRequest> requests = coordinationService.findRequestsForRider(profile.getEmail());
-        // BOARDING_CONFIRMED was excluded here, so a rider's ride disappeared from "next ride" the moment they boarded — right
-        // when it's most relevant. Both statuses count as an active upcoming ride.
+        // Includes BOARDING_CONFIRMED so the ride stays visible after boarding.
         Ride nextConfirmedRide = requests.stream()
                 .filter(request -> request.getStatus() == RequestStatus.CONFIRMED
                         || request.getStatus() == RequestStatus.BOARDING_CONFIRMED)

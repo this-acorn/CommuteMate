@@ -63,11 +63,7 @@ public class NotificationService {
         notificationRepository.saveAll(unread);
     }
 
-    // Marks a single notification read (e.g. after "View ride" is clicked).
-    // Ownership check mirrors the pattern used everywhere else in the app
-    // (see RideCoordinationService's requireRideOwner-style checks) — the
-    // notification ID is a client-supplied path variable, so we don't trust
-    // it belongs to whoever is asking without checking first.
+    // Marks one notification read; verifies ownership first.
     @Transactional
     public Optional<Notification> markRead(Long notificationId, String ownerEmail) {
         if (notificationId == null || ownerEmail == null || ownerEmail.isBlank()) {

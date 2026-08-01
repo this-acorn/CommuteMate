@@ -34,10 +34,7 @@ public class NotificationController extends AuthenticatedController {
 
     @GetMapping("/notifications")
     public String list(Model model, HttpServletResponse response) {
-        // Without this, browsers often restore this page from the
-        // back/forward cache after "View ride" redirects away and the user
-        // hits Back — showing the stale unread count until a manual reload.
-        // no-store forces a real request to the server every time.
+        // Prevents the browser from showing a stale unread count via back/forward cache.
         response.setHeader("Cache-Control", "no-store");
         Profile profile = requireCurrentProfile();
         List<Notification> notifications = notificationService.findForUser(profile.getEmail());

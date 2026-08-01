@@ -169,12 +169,8 @@ public class RideCoordinationService {
         return requestRepository.save(request);
     }
 
-    // Epic 4: post-ride workflow, step 2 of 2. The driver confirms arrival at
-    // the destination, which completes the ride for every rider who boarded.
-    // Reward points/eco-score for this ride become part of the driver's
-    // total the moment at least one request is COMPLETED — see
-    // RewardService.summaryForDriver(), which now counts a ride only once it
-    // has an actual completed rider, not just because it was published.
+    // Step 2 of 2: driver confirms arrival, completing the ride for every
+    // boarded rider and crediting rewards once one request is COMPLETED.
     @Transactional
     public List<RideRequest> confirmArrival(Long rideId, Profile driver) {
         requireDriverCapability(driver);

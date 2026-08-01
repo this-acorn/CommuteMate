@@ -140,7 +140,15 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Copy reads as copy: hovering text shows the arrow, not a selection I-beam.
+       Links keep their pointer (the UA rule targets them directly, so it wins
+       over this inherited value) and .cursor-pointer still opts buttons in. */
+    cursor: default;
   }
+  /* cursor inherits, so the typing caret has to be asked for explicitly. */
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="search"], input[type="number"], input[type="tel"],
+  input[type="url"], textarea { cursor: text; }
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
 }
 

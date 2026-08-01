@@ -30,8 +30,8 @@ import project.group1.commutemate.service.TransitService;
 
 /**
  * Renders the rider dashboard with a stubbed TransitService to verify the US-10
- * outcomes: buses + alerts shown, no buses, no alerts, alerts feed unavailable,
- * and API unavailable.
+ * outcomes: buses shown, no buses, and API unavailable. The rider dashboard no
+ * longer renders service alerts (still shown on the driver dashboard).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -62,7 +62,7 @@ class DashboardTransitViewTest {
     }
 
     @Test
-    void showsUpcomingBusesAndActiveAlerts() throws Exception {
+    void showsUpcomingBuses() throws Exception {
         when(transitService.getTransitInfo())
                 .thenReturn(new TransitInfo(true, TEST_CAMPUS, true, TEST_ALERT));
 
@@ -73,7 +73,7 @@ class DashboardTransitViewTest {
                 .andExpect(content().string(containsString("9:07pm")))     // actual departure time
                 .andExpect(content().string(containsString("in 7 min")))   // countdown
                 .andExpect(content().string(containsString("Test Campus Yankee")))   // campus heading
-                .andExpect(content().string(containsString("Test Alert Bravo")));
+                .andExpect(content().string(not(containsString("Test Alert Bravo"))));
     }
 
     /** Buses are grouped under the campus they leave from, so every campus is labelled. */
@@ -117,28 +117,6 @@ class DashboardTransitViewTest {
     }
 
     @Test
-    void showsMessageWhenNoRelevantAlerts() throws Exception {
-        when(transitService.getTransitInfo())
-                .thenReturn(new TransitInfo(true, TEST_CAMPUS, true, List.of()));
-
-        mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("No alerts affecting these routes.")));
-    }
-
-    /** A failed alerts feed must not be reported as "no alerts". */
-    @Test
-    void showsErrorWhenAlertsFeedUnavailable() throws Exception {
-        when(transitService.getTransitInfo())
-                .thenReturn(new TransitInfo(true, TEST_CAMPUS, false, List.of()));
-
-        mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Service alerts are temporarily unavailable.")))
-                .andExpect(content().string(not(containsString("No alerts affecting these routes."))));
-    }
-
-    @Test
     void showsErrorWhenApiUnavailable() throws Exception {
         when(transitService.getTransitInfo())
                 .thenReturn(new TransitInfo(false, List.of(), false, List.of()));
@@ -148,19 +126,4 @@ class DashboardTransitViewTest {
                 .andExpect(content().string(containsString("Transit information is temporarily unavailable.")));
     }
 
-    /**
-     * The departures and alerts feeds fail independently, so a dead departures feed
-     * must not take the working alerts down with it — that is exactly what happened
-     * while the retired RTTI endpoint was still wired up.
-     */
-    @Test
-    void stillShowsAlertsWhenDeparturesAreUnavailable() throws Exception {
-        when(transitService.getTransitInfo())
-                .thenReturn(new TransitInfo(false, List.of(), true, TEST_ALERT));
-
-        mockMvc.perform(get("/dashboard/rider").with(user("rider@sfu.ca").roles("RIDER")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Transit information is temporarily unavailable.")))
-                .andExpect(content().string(containsString("Test Alert Bravo")));
-    }
 }

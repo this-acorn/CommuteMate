@@ -68,8 +68,8 @@
             Keep me signed in
           </label>
 
-          <p class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" th:if="${error}" th:text="${error}">Error message</p>
-          <p class="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary" th:if="${success}" th:text="${success}">Success message</p>
+          <p class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" data-auth-alert="data-auth-alert" th:if="${error}" th:text="${error}">Error message</p>
+          <p class="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary" data-auth-alert="data-auth-alert" th:if="${success}" th:text="${success}">Success message</p>
 
           <button type="submit" data-auth-submit="data-auth-submit"
                   class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-sm bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-8 w-full"

@@ -23,7 +23,7 @@
     </div>
 
     <!-- Search + sort toolbar. Works without JS by submitting to the server. -->
-    <form method="get" th:action="@{/rides/available}"
+    <form method="get" th:action="@{/rides/available}" data-rides-filters="data-rides-filters"
       class="mt-8 rounded-2xl border border-border bg-card p-3 card-lift">
 
      <div class="grid gap-3 md:grid-cols-3">
@@ -65,7 +65,7 @@
 
     <div class="flex flex-wrap gap-1.5">
       <button type="submit"
-              class="rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+              class="rounded-full px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors"
               name="sort"
               th:each="s : ${sortOptions}"
               th:value="${s}"
@@ -76,15 +76,12 @@
       </button>
     </div>
 
-    <button type="submit"
-            class="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+    <!-- Filtering is live once JS loads, which hides this. It stays as the
+         submit path for browsers without JS. -->
+    <button type="submit" data-rides-apply="data-rides-apply"
+            class="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground cursor-pointer transition-colors hover:bg-primary/90">
       Apply filters
     </button>
-
-    <a th:href="@{/rides/available}"
-       class="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium transition-colors hover:bg-secondary/70">
-      Clear filters
-    </a>
   </div>
 </form>
 
@@ -92,6 +89,8 @@
       <article th:each="r : ${rides}" class="rounded-2xl border border-border bg-card p-5 card-lift hover:card-lift-hover"
                data-ride="data-ride"
                th:attr="data-search=${#strings.toLowerCase(r.from + ' ' + r.to + ' ' + r.driver)},
+                        data-from=${#strings.toLowerCase(r.from)},
+                        data-to=${#strings.toLowerCase(r.to)},
                         data-depart=${r.departAt},
                         data-price=${r.price},
                         data-eco=${r.ecoScore},

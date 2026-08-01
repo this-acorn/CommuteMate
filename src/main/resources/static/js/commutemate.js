@@ -73,6 +73,20 @@
       t.addEventListener("click", function () { setMode(t.getAttribute("data-mode"), true); });
     });
 
+    form.addEventListener("keydown", function (event) {
+      var target = event.target;
+      var credentialField = target && (target.name === "email" || target.name === "password");
+      if (event.key !== "Enter" || event.isComposing || modeInput.value !== "login" || !credentialField) {
+        return;
+      }
+      event.preventDefault();
+      if (typeof form.requestSubmit === "function") {
+        form.requestSubmit(submitBtn);
+      } else if (submitBtn) {
+        submitBtn.click();
+      }
+    });
+
     // Role selector (sign-up only)
     var roleInput = form.querySelector("input[name='role']");
     var roleButtons = form.querySelectorAll("[data-role]");

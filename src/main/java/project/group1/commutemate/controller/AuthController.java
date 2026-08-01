@@ -2,6 +2,7 @@ package project.group1.commutemate.controller;
 
 import java.util.Optional;
 
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ public class AuthController {
     public String authPage(@RequestParam(defaultValue = "login") String mode,
                            @RequestParam(required = false) String error,
                            @RequestParam(required = false) String registered,
+                           HttpSession session,
                            Model model) {
         // Already signed in — go to the member's own dashboard instead
         Optional<Profile> profile = currentUserService.currentProfile();
@@ -42,8 +44,15 @@ public class AuthController {
 
         model.addAttribute("authenticated", false);
         model.addAttribute("mode", "signup".equals(mode) ? "signup" : "login");
+        model.addAttribute("selectedRole", "rider");
         if (error != null) {
             model.addAttribute("error", "Invalid email or password");
+            model.addAttribute("loginError", true);
+            Object lastEmail = session.getAttribute("LAST_LOGIN_EMAIL");
+            if (lastEmail instanceof String email) {
+                model.addAttribute("email", email);
+            }
+            session.removeAttribute("LAST_LOGIN_EMAIL");
         }
         if (registered != null) {
             model.addAttribute("success", "Account created — log in with your SFU email.");

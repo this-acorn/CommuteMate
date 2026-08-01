@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import project.group1.commutemate.exception.RideOperationException;
+import project.group1.commutemate.exception.RideOperationException.ErrorCode;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideLocations;
 import project.group1.commutemate.repository.RideRepository;
@@ -50,7 +51,7 @@ public class RideService {
 
     public Ride findById(Long id) {
         return rideRepository.findById(id)
-                .orElseThrow(() -> new RideOperationException("Ride not found."));
+                .orElseThrow(() -> new RideOperationException(ErrorCode.RIDE_NOT_FOUND, "Ride not found."));
     }
 
     // lets callers check without catching an exception — used by
@@ -106,26 +107,32 @@ public class RideService {
     private void validateOwner(String driverEmail, String driverName) {
         if (driverEmail == null || driverEmail.isBlank()
                 || driverName == null || driverName.isBlank()) {
-            throw new RideOperationException("A signed-in driver is required to create a ride.");
+            throw new RideOperationException(ErrorCode.DRIVER_REQUIRED,
+                    "A signed-in driver is required to create a ride.");
         }
     }
 
     // from/to are already canonical here: null means the value was missing or off the list
     private void validateCreate(String from, String to, LocalDateTime departAt, int seats, int price) {
         if (from == null || to == null) {
-            throw new RideOperationException("Choose a pickup and destination from the list.");
+            throw new RideOperationException(ErrorCode.LOCATION_REQUIRED,
+                    "Choose a pickup and destination from the list.");
         }
         if (from.equalsIgnoreCase(to)) {
-            throw new RideOperationException("Pickup and destination must be different.");
+            throw new RideOperationException(ErrorCode.SAME_ROUTE,
+                    "Pickup and destination must be different.");
         }
         if (departAt == null || !departAt.isAfter(now())) {
-            throw new RideOperationException("Departure must be in the future.");
+            throw new RideOperationException(ErrorCode.DEPARTURE_INVALID,
+                    "Departure must be in the future.");
         }
         if (seats < 1 || seats > 5) {
-            throw new RideOperationException("Seats must be between 1 and 5.");
+            throw new RideOperationException(ErrorCode.SEATS_INVALID,
+                    "Seats must be between 1 and 5.");
         }
         if (price < 0 || price > 10) {
-            throw new RideOperationException("Price must be between $0 and $10.");
+            throw new RideOperationException(ErrorCode.PRICE_INVALID,
+                    "Price must be between $0 and $10.");
         }
     }
 

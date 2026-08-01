@@ -1525,3 +1525,8 @@
     }
   }
 }
+
+.field-error {
+  border-color: var(--destructive) !important;
+  box-shadow: 0 0 0 1px var(--destructive) !important;
+}

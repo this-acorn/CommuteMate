@@ -4,28 +4,27 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.service.RideService;
 
 /**
  * Epic 4 — Incentives & Rewards.
  *
- * ============================== DRAFT — STAYING DRAFT UNTIL EPIC 5 LANDS ==============================
- * Per review discussion (this-acorn, sqwhh, jaskarndeogun-cmyk): points/eco-score
- * should be awarded for COMPLETED rides, not simply for rides a driver has
- * published — right now a driver gets points immediately on publish, even if
- * the ride never happens, and points vanish silently if the ride is deleted.
- * Epic 5 doesn't have a "completed ride" concept yet, so this can't be fixed
- * correctly until that lands. Keeping this in draft per team consensus.
- *
- * Also flagged: eco-score is currently computed by Ride/RideService from
- * seats OFFERED, not seats actually FILLED — that's an Epic 5 concern, not
- * fixable from this file.
- * ========================================================================================================
+ * ============================== COMPLETION-BASED (resolved) ==============================
+ * Previously this was a "draft" awarding points for any published ride,
+ * even if it never happened. Now that Epic 5 has a real post-ride workflow
+ * (RideCoordinationService.confirmBoarding()/confirmArrival()), a ride only
+ * counts toward a driver's total once at least one of its ride requests has
+ * reached RequestStatus.COMPLETED — i.e. someone actually boarded and the
+ * driver confirmed arrival. Rides that were only ever published, or never
+ * completed, don't count. This also means a ride keeps counting after it
+ * departs (no longer "upcoming"), since RideService.findByDriverEmail is an
+ * all-time lookup, not limited to future rides.
+ * ===========================================================================================
  *
  * Driver-keyed by email (not full name) to avoid two different drivers with
- * the same display name sharing a point total — matches RideService's
- * findUpcomingByDriverEmail after the Epic 5 PR #10 merge.
+ * the same display name sharing a point total.
  */
 @Service
 public class RewardService {
@@ -38,22 +37,35 @@ public class RewardService {
 
     /**
      * Points + eco-score for a driver, computed in a single pass over their
-     * rides (one query) instead of two separate calls — per review feedback
-     * flagging the cost of querying rides twice per profile load.
+     * rides (one query) instead of two separate calls. Only rides with at
+     * least one COMPLETED request count toward the total.
      */
     public RewardSummary summaryForDriver(String driverEmail) {
-        List<Ride> rides = rideService.findUpcomingByDriverEmail(driverEmail);
+        List<Ride> rides = rideService.findByDriverEmail(driverEmail);
         if (rides.isEmpty()) {
             return RewardSummary.EMPTY;
         }
 
         int totalPoints = 0;
         int ecoScoreSum = 0;
+        int completedRideCount = 0;
         for (Ride ride : rides) {
+            if (!hasCompletedRider(ride)) {
+                continue;
+            }
             totalPoints += ride.getPoints();
             ecoScoreSum += ride.getEcoScore();
+            completedRideCount++;
         }
 
-        return new RewardSummary(totalPoints, ecoScoreSum / rides.size());
+        if (completedRideCount == 0) {
+            return RewardSummary.EMPTY;
+        }
+        return new RewardSummary(totalPoints, ecoScoreSum / completedRideCount);
+    }
+
+    private boolean hasCompletedRider(Ride ride) {
+        return ride.getRequests().stream()
+                .anyMatch(request -> request.getStatus() == RequestStatus.COMPLETED);
     }
 }

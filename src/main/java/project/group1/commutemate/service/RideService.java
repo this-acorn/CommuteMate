@@ -39,9 +39,25 @@ public class RideService {
                 driverEmail, now());
     }
 
+    // Epic 4: all-time lookup (no departAt filter) so completed rides keep
+    // counting toward a driver's reward total. See RewardService.
+    public List<Ride> findByDriverEmail(String driverEmail) {
+        if (driverEmail == null || driverEmail.isBlank()) {
+            return List.of();
+        }
+        return rideRepository.findByDriverEmailIgnoreCase(driverEmail);
+    }
+
     public Ride findById(Long id) {
         return rideRepository.findById(id)
                 .orElseThrow(() -> new RideOperationException("Ride not found."));
+    }
+
+    // lets callers check without catching an exception — used by
+    // the notifications list to show "ride no longer available" instead of
+    // a clickable link that would just redirect away with an error.
+    public boolean exists(Long id) {
+        return id != null && rideRepository.existsById(id);
     }
 
     public List<Ride> search(String query, String sort) {

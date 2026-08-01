@@ -79,12 +79,18 @@ public class SecurityConfig {
                         .hasRole("DRIVER")
                 .requestMatchers(HttpMethod.POST, "/rides/*/delete")
                         .hasRole("DRIVER")
+                // Epic 4: post-ride workflow
+                .requestMatchers(HttpMethod.POST, "/rides/*/arrived")
+                        .hasRole("DRIVER")
                 // Rider features
                 .requestMatchers("/dashboard/rider", "/rides/available")
                         .hasRole("RIDER")
                 .requestMatchers(HttpMethod.POST, "/rides/*/requests")
                         .hasRole("RIDER")
                 .requestMatchers(HttpMethod.POST, "/ride-requests/*/cancel")
+                        .hasRole("RIDER")
+                // Epic 4: post-ride workflow
+                .requestMatchers(HttpMethod.POST, "/ride-requests/*/board")
                         .hasRole("RIDER")
                 .anyRequest().authenticated()
             )

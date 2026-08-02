@@ -71,18 +71,22 @@ public class RideService {
         }
     }
 
-    if (sort != null && !"Departure".equals(sort)) {
+    if (sort != null && !"Recommended".equals(sort)) {
     result.sort(comparatorFor(sort));
-    } else {
-    result.sort(Comparator
-            .comparingInt(Ride::getSeatsLeft).reversed()
-            .thenComparingInt(Ride::getEcoScore).reversed()
-            .thenComparingDouble(Ride::getRating).reversed()
-            .thenComparingInt(Ride::getPrice)
-            .thenComparing(Ride::getDepartAt));
+} else {
+    result.sort(recommendedComparator());
 }
 
     return result;
+}
+
+private Comparator<Ride> recommendedComparator() {
+    return Comparator
+            .comparingInt(Ride::getSeatsLeft).reversed()
+            .thenComparing(Comparator.comparingInt(Ride::getEcoScore).reversed())
+            .thenComparing(Comparator.comparingDouble(Ride::getRating).reversed())
+            .thenComparingInt(Ride::getPrice)
+            .thenComparing(Ride::getDepartAt);
 }
 
     private Comparator<Ride> comparatorFor(String sort) {

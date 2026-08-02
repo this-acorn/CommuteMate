@@ -28,7 +28,7 @@ import project.group1.commutemate.service.RideService;
 @Controller
 public class RidesController extends AuthenticatedController {
 
-    private static final String[] SORT_OPTIONS = {"Departure", "Price", "Eco-Score", "Rating"};
+    private static final String[] SORT_OPTIONS = {"Recommended", "Departure", "Price", "Eco-Score", "Rating"};
 
     private final RideService rideService;
     private final RideCoordinationService coordinationService;
@@ -49,7 +49,7 @@ public class RidesController extends AuthenticatedController {
         public String available(@RequestParam(name = "q", required = false, defaultValue = "") String query,
                         @RequestParam(name = "departure", required = false) String departure,
                         @RequestParam(name = "destination", required = false) String destination,
-                        @RequestParam(required = false, defaultValue = "Departure") String sort,
+                        @RequestParam(required = false, defaultValue = "Recommended") String sort,
                         Model model) {
 
     List<Ride> rides = rideService.recommended(query, departure, destination, sort);

@@ -11,11 +11,36 @@
     initAuthToggle();
     initAvailableRides();
     initCreateRide();
+    initChatUnreadIndicators();
   });
 
   function swapClasses(el, remove, add) {
     remove.forEach(function (c) { el.classList.remove(c); });
     add.forEach(function (c) { el.classList.add(c); });
+  }
+
+  function initChatUnreadIndicators() {
+    var dashboard = document.querySelector("[data-chat-dashboard]");
+    if (!dashboard) return;
+
+    dashboard.querySelectorAll("[data-chat-link]").forEach(function (link) {
+      link.addEventListener("click", function () {
+        var rideId = link.getAttribute("data-ride-id");
+        if (!rideId) return;
+
+        dashboard.querySelectorAll("[data-chat-unread-dot]").forEach(function (dot) {
+          if (dot.getAttribute("data-ride-id") === rideId) {
+            dot.remove();
+          }
+        });
+      });
+    });
+
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
   }
 
   /* ---------------------------------------------------------- auth page */

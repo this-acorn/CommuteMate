@@ -176,8 +176,82 @@
   box-shadow: var(--shadow-lift);
   transform: translateY(-2px);
 }
-
 @utility field-error {
   border-color: var(--destructive) !important;
   box-shadow: 0 0 0 1px var(--destructive) !important;
+}
+
+/* Ride chat */
+.chat-unread-dot {
+  background: var(--destructive);
+}
+
+.chat-thread {
+  max-height: 34rem;
+  min-height: 18rem;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.chat-message {
+  max-width: 82%;
+  overflow-wrap: anywhere;
+}
+
+.chat-message-mine {
+  margin-left: auto;
+}
+
+.chat-message-body {
+  white-space: pre-wrap;
+}
+
+.chat-compose-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  border: 1px solid var(--input);
+  border-radius: 1.35rem;
+  background: var(--background);
+  padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.chat-compose-bar:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 14%, transparent);
+}
+
+.chat-compose textarea {
+  display: block;
+  width: 100%;
+  min-height: 2.6rem;
+  max-height: 8rem;
+  resize: none;
+  overflow-y: auto;
+  border: 0;
+  background: transparent;
+  padding: 0.62rem 0;
+  color: var(--foreground);
+  font: inherit;
+  line-height: 1.35;
+}
+
+.chat-compose textarea:focus {
+  outline: none;
+}
+
+.chat-compose textarea::placeholder {
+  color: var(--muted-foreground);
+}
+
+.chat-send-button {
+  min-width: 4.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0 1rem;
+  cursor: pointer;
 }

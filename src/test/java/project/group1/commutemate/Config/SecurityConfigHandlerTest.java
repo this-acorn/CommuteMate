@@ -1,6 +1,7 @@
 package project.group1.commutemate.Config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 
@@ -37,6 +38,21 @@ class SecurityConfigHandlerTest {
         MockHttpServletResponse response = handleAccessDenied();
 
         assertEquals("/dashboard/rider", response.getRedirectedUrl());
+    }
+
+    @Test
+    void chatMessageAccessDeniedReturnsForbiddenInsteadOfDashboardRedirect() throws Exception {
+        authenticateAs("ROLE_RIDER");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("POST", "/rides/42/chat/messages");
+        request.setServletPath("/rides/42/chat/messages");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        securityConfig.accessDeniedHandler().handle(
+                request, response, new AccessDeniedException("forbidden"));
+
+        assertEquals(403, response.getStatus());
+        assertNull(response.getRedirectedUrl());
     }
 
     @Test

@@ -134,13 +134,13 @@ public class RideCoordinationService {
         return requestRepository.save(request);
     }
 
-    // Deletes a ride and all requests
+    // Deletes a ride together with all requests and chat messages
     @Transactional
     public void deleteOwnedRide(Long rideId, Profile driver) {
         requireDriverCapability(driver);
         Ride ride = lockedRide(rideId);
         requireRideOwner(ride, driver, "delete this ride");
-        // Ride.requests uses cascade remove
+        // Ride requests and messages both use cascade remove
         rideRepository.delete(ride);
     }
 

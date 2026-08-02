@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Ride chat — CommuteMate',
+  'Coordinate pickup details with confirmed CommuteMate ride participants.')}"></head>
+<body>
+<div class="min-h-screen bg-background">
+  <th:block th:if="${chat.owner}">
+    <header th:replace="~{fragments/layout :: nav('drive')}"></header>
+  </th:block>
+  <th:block th:unless="${chat.owner}">
+    <header th:replace="~{fragments/layout :: nav('ride')}"></header>
+  </th:block>
+
+  <main class="mx-auto max-w-5xl px-6 py-10">
+    <a th:href="@{/rides/{id}(id=${chat.ride.id})}"
+       class="text-sm text-muted-foreground hover:text-foreground">← Back to ride details</a>
+
+    <div id="chat-error"
+         th:hidden="${errorMessage == null}"
+         class="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+         th:text="${errorMessage}"></div>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+      <section class="lg:col-span-2 rounded-2xl border border-border bg-card p-6 card-lift">
+        <div class="flex flex-wrap items-start justify-between gap-4 border-b border-border" style="padding-bottom: 1.25rem;">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-full bg-primary text-primary-foreground text-sm font-semibold"
+                 th:text="${chat.ride.driverInitials}">DD</div>
+            <div>
+              <p class="font-display text-xl font-semibold" th:text="${chat.ride.driver}">Demo Driver</p>
+              <p class="text-sm text-muted-foreground"
+                 th:text="${chat.ride.car} + ' · ' + ${#numbers.formatDecimal(chat.ride.rating, 1, 1)} + '★'">Vehicle · 5★</p>
+            </div>
+          </div>
+          <span class="rounded-full bg-secondary px-3 py-1 text-xs font-medium"
+                th:text="${chat.owner ? 'Driver' : 'Confirmed rider'}">Confirmed rider</span>
+        </div>
+
+        <div class="mt-5">
+          <p class="text-sm font-medium text-primary">Ride conversation</p>
+          <h1 class="mt-1 font-display text-2xl font-semibold tracking-tight"
+              th:text="${chat.ride.from + ' → ' + chat.ride.to}">Metrotown → SFU Burnaby</h1>
+          <p class="mt-1 text-sm text-muted-foreground"
+             th:text="${chat.ride.departDate + ' · ' + chat.ride.departTime}">Jul 25, 2026 · 8:00 AM</p>
+        </div>
+
+        <div id="chat-thread" class="chat-thread mt-5 rounded-xl bg-secondary/60 p-4">
+          <div id="empty-chat"
+               th:hidden="${!#lists.isEmpty(chat.messages)}"
+               class="py-10 text-center">
+            <p class="font-medium">No messages yet.</p>
+            <p class="mt-1 text-sm text-muted-foreground">Start the conversation with a pickup or timing update.</p>
+          </div>
+
+          <div id="message-list" class="space-y-3">
+            <article th:each="message : ${chat.messages}"
+                     th:attr="data-message-id=${message.id}"
+                     class="chat-message rounded-xl border border-border bg-card px-4 py-3"
+                     th:classappend="${message.mine} ? ' chat-message-mine border-primary/30 bg-primary/5' : ''">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold" th:text="${message.mine ? 'You' : message.senderName}">You</p>
+                  <p class="text-xs text-muted-foreground" th:text="${message.senderEmail}">rider@sfu.ca</p>
+                </div>
+                <time class="text-xs text-muted-foreground" th:text="${message.sentAt}">Jul 23, 1:10 AM</time>
+              </div>
+              <p class="chat-message-body mt-2 text-sm" th:text="${message.body}">I will wait near the east entrance.</p>
+            </article>
+          </div>
+        </div>
+
+        <form id="chat-form"
+              method="post"
+              th:action="@{/rides/{id}/chat/messages(id=${chat.ride.id})}"
+              th:attr="data-poll-url=@{/rides/{id}/chat/messages(id=${chat.ride.id})}"
+              class="chat-compose mt-4">
+          <div class="chat-compose-bar">
+            <label for="message" class="sr-only">New message</label>
+            <textarea id="message" name="message" required="required" rows="1"
+                      th:attr="maxlength=${maxMessageLength}"
+                      placeholder="Message"></textarea>
+            <button id="send-button" type="submit"
+                    class="chat-send-button inline-flex items-center justify-center bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              Send
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="rounded-2xl border border-border bg-card p-6 card-lift">
+        <h2 class="font-display text-lg font-semibold">Ride details</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Use the chat to coordinate only with confirmed participants of this ride.</p>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <p class="text-xs font-medium text-muted-foreground">Pickup</p>
+            <p class="mt-1 font-semibold" th:text="${chat.ride.from}">Metrotown</p>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-muted-foreground">Destination</p>
+            <p class="mt-1 font-semibold" th:text="${chat.ride.to}">SFU Burnaby</p>
+          </div>
+
+          <div class="rounded-lg bg-secondary/60 p-3">
+            <p class="text-xs text-muted-foreground">Departure</p>
+            <p class="mt-1 text-sm font-semibold"
+               th:text="${chat.ride.departDate} + ' · ' + ${chat.ride.departTime}">Tomorrow · 8:00 AM</p>
+          </div>
+          <div class="rounded-lg bg-secondary/60 p-3">
+            <p class="text-xs text-muted-foreground">Price</p>
+            <p class="mt-1 text-sm font-semibold" th:text="'$' + ${chat.ride.price} + ' per seat'">$4 per seat</p>
+          </div>
+          <div class="rounded-lg bg-secondary/60 p-3">
+            <p class="text-xs text-muted-foreground">Occupancy</p>
+            <p class="mt-1 text-sm font-semibold"
+               th:text="${chat.ride.seatsTaken} + '/' + ${chat.ride.seats} + ' confirmed'">1/4 confirmed</p>
+          </div>
+        </div>
+
+        <a th:href="@{/rides/{id}(id=${chat.ride.id})}"
+           class="mt-5 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">
+          View full ride details
+        </a>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script th:src="@{/js/ride-chat.js}" defer></script>
+</body>
+</html>

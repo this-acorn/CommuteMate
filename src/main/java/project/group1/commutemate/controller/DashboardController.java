@@ -2,7 +2,9 @@ package project.group1.commutemate.controller;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,6 +16,7 @@ import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideRequest;
 import project.group1.commutemate.service.NotificationService;
+import project.group1.commutemate.service.RideChatService;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 import project.group1.commutemate.service.TransitService;
@@ -25,12 +28,14 @@ public class DashboardController extends AuthenticatedController {
 
     private final RideService rideService;
     private final RideCoordinationService coordinationService;
+    private final RideChatService chatService;
     private final Clock clock;
     private final TransitService transitService;
     private final WeatherService weatherService;
 
     public DashboardController(RideService rideService,
                                RideCoordinationService coordinationService,
+                               RideChatService chatService,
                                CurrentUserService currentUserService,
                                NotificationService notificationService,
                                Clock clock,
@@ -39,6 +44,7 @@ public class DashboardController extends AuthenticatedController {
         super(currentUserService, notificationService);
         this.rideService = rideService;
         this.coordinationService = coordinationService;
+        this.chatService = chatService;
         this.clock = clock;
         this.transitService = transitService;
         this.weatherService = weatherService;
@@ -70,6 +76,8 @@ public class DashboardController extends AuthenticatedController {
         model.addAttribute("nextRide", nextConfirmedRide);
         model.addAttribute("riderRequests", requests);
         model.addAttribute("suggested", suggested);
+        model.addAttribute("unreadChatRideIds",
+                chatService.findUnreadRideIds(profile, chatRideIdsForRider(requests)));
         model.addAttribute("availableRideCount",
                 upcoming.stream().filter(ride -> !ride.isFull()).count());
         model.addAttribute("transit", transitService.getTransitInfo());
@@ -97,6 +105,8 @@ public class DashboardController extends AuthenticatedController {
         model.addAttribute("now", now);
         model.addAttribute("myRides", myRides);
         model.addAttribute("driverRequests", requests);
+        model.addAttribute("unreadChatRideIds",
+                chatService.findUnreadRideIds(profile, chatRideIdsForDriver(myRides, requests)));
         model.addAttribute("upcomingRideCount", myRides.size());
         // Issue #25: driver dashboard previously showed hardcoded points/eco-score.
         model.addAttribute("profile", profile);
@@ -105,5 +115,39 @@ public class DashboardController extends AuthenticatedController {
                 .count());
         model.addAttribute("weather", weatherService.getCurrentWeather().orElse(null));
         return "dashboard-driver";
+    }
+
+
+    private Set<Long> chatRideIdsForRider(List<RideRequest> requests) {
+        Set<Long> rideIds = new LinkedHashSet<>();
+        for (RideRequest request : requests) {
+            if (request.getRide() != null && request.getRide().getId() != null
+                    && isChatStatus(request.getStatus())) {
+                rideIds.add(request.getRide().getId());
+            }
+        }
+        return rideIds;
+    }
+
+    private Set<Long> chatRideIdsForDriver(List<Ride> rides, List<RideRequest> requests) {
+        Set<Long> rideIds = new LinkedHashSet<>();
+        for (Ride ride : rides) {
+            if (ride.getId() != null) {
+                rideIds.add(ride.getId());
+            }
+        }
+        for (RideRequest request : requests) {
+            if (request.getRide() != null && request.getRide().getId() != null
+                    && isChatStatus(request.getStatus())) {
+                rideIds.add(request.getRide().getId());
+            }
+        }
+        return rideIds;
+    }
+
+    private boolean isChatStatus(RequestStatus status) {
+        return status == RequestStatus.CONFIRMED
+                || status == RequestStatus.BOARDING_CONFIRMED
+                || status == RequestStatus.COMPLETED;
     }
 }

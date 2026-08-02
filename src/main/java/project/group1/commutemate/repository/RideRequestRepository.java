@@ -1,5 +1,6 @@
 package project.group1.commutemate.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,10 @@ public interface RideRequestRepository extends JpaRepository<RideRequest, Long> 
 
     // Finds a ride request by the ride id and rider email, ignoring case
     Optional<RideRequest> findByRideIdAndRiderEmailIgnoreCase(Long rideId, String riderEmail);
+
+    // Checks whether a rider has a request in one of the allowed statuses for this ride.
+    boolean existsByRide_IdAndRiderEmailIgnoreCaseAndStatusIn(
+            Long rideId, String riderEmail, Collection<RequestStatus> statuses);
 
     // Finds all ride requests for a specific rider ordered by the last updated time 
     @EntityGraph(attributePaths = "ride")

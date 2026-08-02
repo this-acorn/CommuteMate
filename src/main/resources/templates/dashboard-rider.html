@@ -7,7 +7,7 @@
 
   <header th:replace="~{fragments/layout :: nav('ride')}"></header>
 
-  <main class="mx-auto max-w-7xl px-6 py-10">
+  <main class="mx-auto max-w-7xl px-6 py-10" data-chat-dashboard>
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p class="text-sm font-medium text-primary">Rider dashboard</p>
@@ -40,26 +40,77 @@
         <a th:href="@{/rides/available}" class="mt-2 inline-block text-sm font-medium text-primary hover:underline">Browse available rides →</a>
       </div>
       <div class="mt-4 grid gap-3 md:grid-cols-2">
-        <article th:each="request : ${riderRequests}" class="rounded-2xl border border-border bg-card p-5 card-lift">
+        <article th:each="request : ${riderRequests}"
+                 class="rounded-2xl border border-border bg-card p-5 card-lift">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="font-semibold" th:text="${request.ride.from} + ' → ' + ${request.ride.to}">Metrotown → SFU</p>
-              <p class="mt-1 text-xs text-muted-foreground" th:text="${request.ride.departDate} + ' · ' + ${request.ride.departTime}">Tomorrow · 8:00 AM</p>
+              <p class="font-semibold"
+                 th:text="${request.ride.from} + ' → ' + ${request.ride.to}">
+                Metrotown → SFU
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground"
+                 th:text="${request.ride.departDate} + ' · ' + ${request.ride.departTime}">
+                Tomorrow · 8:00 AM
+              </p>
             </div>
             <span class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  th:classappend="${request.status.name() == 'CONFIRMED' or request.status.name() == 'BOARDING_CONFIRMED' or request.status.name() == 'COMPLETED'} ? 'bg-emerald-500/10 text-emerald-800' : (${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : 'bg-secondary text-muted-foreground')"
-                  th:text="${request.status.label()}">Pending</span>
+                  th:classappend="${request.status.name() == 'CONFIRMED'
+                          or request.status.name() == 'BOARDING_CONFIRMED'
+                          or request.status.name() == 'COMPLETED'}
+                          ? 'bg-emerald-500/10 text-emerald-800'
+                          : (${request.status.name() == 'PENDING'}
+                          ? 'bg-amber-500/10 text-amber-800'
+                          : 'bg-secondary text-muted-foreground')"
+                  th:text="${request.status.label()}">
+              Pending
+            </span>
           </div>
-          <p class="mt-3 text-sm text-muted-foreground" th:text="'Driver: ' + ${request.ride.driver}">Driver: Demo Driver</p>
-          <div class="mt-4 flex items-center gap-2">
-            <a th:href="@{/rides/{id}(id=${request.ride.id})}" class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">View ride</a>
-            <!-- Epic 4: post-ride workflow, step 1. Only shown once the
-                 ride is within 30 minutes of departure. -->
-            <form th:if="${request.status.name() == 'CONFIRMED' and !now.isBefore(request.ride.departAt.minusMinutes(30))}" method="post" th:action="@{/ride-requests/{id}/board(id=${request.id})}">
-              <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">Confirm boarding</button>
+          <p class="mt-3 text-sm text-muted-foreground"
+             th:text="'Driver: ' + ${request.ride.driver}">
+            Driver: Demo Driver
+          </p>
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <a th:href="@{/rides/{id}(id=${request.ride.id})}"
+               class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">
+              View ride
+            </a>
+            <a th:if="${request.status.name() == 'CONFIRMED'
+                    or request.status.name() == 'BOARDING_CONFIRMED'
+                    or request.status.name() == 'COMPLETED'}"
+               th:href="@{/rides/{id}/chat(id=${request.ride.id})}"
+               data-chat-link
+               th:data-ride-id="${request.ride.id}"
+               class="relative inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">
+              Ride chat
+              <span th:if="${unreadChatRideIds.contains(request.ride.id)}"
+                    data-chat-unread-dot
+                    th:data-ride-id="${request.ride.id}"
+                    class="absolute -right-1 -top-1 chat-unread-dot h-3 w-3 rounded-full ring-2 ring-background"
+                    title="Unread messages">
+                <span class="sr-only">Unread messages</span>
+              </span>
+            </a>
+            <!-- Epic 4: post-ride workflow, step 1.
+                 Only shown once the ride is within 30 minutes of departure. -->
+            <form th:if="${request.status.name() == 'CONFIRMED'
+                    and !now.isBefore(request.ride.departAt.minusMinutes(30))}"
+                  method="post"
+                  th:action="@{/ride-requests/{id}/board(id=${request.id})}">
+
+              <button type="submit"
+                      class="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">
+                Confirm boarding
+              </button>
             </form>
-            <form th:if="${(request.status.name() == 'PENDING' or request.status.name() == 'CONFIRMED') and request.ride.departAt.isAfter(now)}" method="post" th:action="@{/ride-requests/{id}/cancel(id=${request.id})}">
-              <button type="submit" class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">Cancel request</button>
+            <form th:if="${(request.status.name() == 'PENDING'
+                    or request.status.name() == 'CONFIRMED')
+                    and request.ride.departAt.isAfter(now)}"
+                  method="post"
+                  th:action="@{/ride-requests/{id}/cancel(id=${request.id})}">
+              <button type="submit"
+                      class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                Cancel request
+              </button>
             </form>
           </div>
         </article>
@@ -92,6 +143,19 @@
               </div>
             </div>
             <div class="flex gap-2">
+              <a th:href="@{/rides/{id}/chat(id=${r.id})}"
+                   data-chat-link
+                   th:data-ride-id="${r.id}"
+                   class="relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm border border-input bg-background shadow-sm hover:bg-accent h-9 px-4 py-2">
+                Ride chat
+                <span th:if="${unreadChatRideIds.contains(r.id)}"
+                        data-chat-unread-dot
+                        th:data-ride-id="${r.id}"
+                      class="absolute -right-1 -top-1 chat-unread-dot h-3 w-3 rounded-full ring-2 ring-background"
+                      title="Unread messages">
+                  <span class="sr-only">Unread messages</span>
+                </span>
+              </a>
               <a th:href="@{/rides/{id}(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">View trip</a>
             </div>
           </div>

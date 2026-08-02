@@ -36,6 +36,7 @@ import project.group1.commutemate.model.RideChatView;
 import project.group1.commutemate.model.RideMessage;
 import project.group1.commutemate.model.Role;
 import project.group1.commutemate.repository.RideChatReadStateRepository;
+import project.group1.commutemate.repository.RideLatestMessageId;
 import project.group1.commutemate.repository.RideMessageRepository;
 import project.group1.commutemate.repository.RideRepository;
 import project.group1.commutemate.repository.RideRequestRepository;
@@ -334,14 +335,44 @@ class RideChatServiceTest {
 
     @Test
     void messageFromAnotherParticipantMakesRideUnread() {
-        when(readStateRepository.findByRide_IdAndReaderEmailIgnoreCase(
-                10L, "driver@sfu.ca")).thenReturn(Optional.empty());
-        when(messageRepository.countUnreadMessages(
-                10L, "driver@sfu.ca", 0L)).thenReturn(1L);
+        when(readStateRepository.findByRide_IdInAndReaderEmailIgnoreCase(
+                Set.of(10L), "driver@sfu.ca")).thenReturn(List.of());
+        when(messageRepository.findLatestOtherMessageIds(
+                Set.of(10L), "driver@sfu.ca"))
+                .thenReturn(List.of(new RideLatestMessageId(10L, 1L)));
 
         var unreadRideIds = service.findUnreadRideIds(driver, List.of(10L));
 
         assertEquals(Set.of(10L), unreadRideIds);
+    }
+
+    @Test
+    void unreadLookupBatchesAllDashboardRidesIntoTwoRepositoryCalls() {
+        Ride secondRide = new Ride(
+                "driver@sfu.ca", "Demo Driver", "DD", "Surrey", "SFU",
+                LocalDateTime.now(CLOCK).plusDays(2), 3, 1, 4, 20, 80,
+                "Test car", 5.0, null);
+        secondRide.setId(20L);
+        RideChatReadState firstRideState =
+                new RideChatReadState(ride, "driver@sfu.ca", 40L);
+
+        when(readStateRepository.findByRide_IdInAndReaderEmailIgnoreCase(
+                Set.of(10L, 20L), "driver@sfu.ca"))
+                .thenReturn(List.of(firstRideState));
+        when(messageRepository.findLatestOtherMessageIds(
+                Set.of(10L, 20L), "driver@sfu.ca"))
+                .thenReturn(List.of(
+                        new RideLatestMessageId(10L, 40L),
+                        new RideLatestMessageId(20L, 90L)));
+
+        var unreadRideIds = service.findUnreadRideIds(
+                driver, java.util.Arrays.asList(10L, 20L, 10L, null));
+
+        assertEquals(Set.of(20L), unreadRideIds);
+        verify(readStateRepository).findByRide_IdInAndReaderEmailIgnoreCase(
+                Set.of(10L, 20L), "driver@sfu.ca");
+        verify(messageRepository).findLatestOtherMessageIds(
+                Set.of(10L, 20L), "driver@sfu.ca");
     }
 
     @Test

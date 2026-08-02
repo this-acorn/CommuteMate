@@ -1,5 +1,6 @@
 package project.group1.commutemate.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,13 +19,14 @@ public interface RideMessageRepository extends JpaRepository<RideMessage, Long> 
             Long rideId, Long afterId);
 
     @Query("""
-            select count(message)
+            select new project.group1.commutemate.repository.RideLatestMessageId(
+                    message.ride.id, max(message.id))
             from RideMessage message
-            where message.ride.id = :rideId
-              and message.id > :afterId
+            where message.ride.id in :rideIds
               and lower(message.senderEmail) <> lower(:readerEmail)
+            group by message.ride.id
             """)
-    long countUnreadMessages(@Param("rideId") Long rideId,
-                             @Param("readerEmail") String readerEmail,
-                             @Param("afterId") long afterId);
+    List<RideLatestMessageId> findLatestOtherMessageIds(
+            @Param("rideIds") Collection<Long> rideIds,
+            @Param("readerEmail") String readerEmail);
 }

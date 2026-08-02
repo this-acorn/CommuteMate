@@ -5,9 +5,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -25,6 +27,7 @@ import project.group1.commutemate.model.RideChatView;
 import project.group1.commutemate.model.RideMessage;
 import project.group1.commutemate.model.RideMessageView;
 import project.group1.commutemate.repository.RideChatReadStateRepository;
+import project.group1.commutemate.repository.RideLatestMessageId;
 import project.group1.commutemate.repository.RideMessageRepository;
 import project.group1.commutemate.repository.RideRepository;
 import project.group1.commutemate.repository.RideRequestRepository;
@@ -122,18 +125,31 @@ public class RideChatService {
         }
 
         String readerEmail = normalizeEmail(member.getEmail());
-        Set<Long> unreadRideIds = new LinkedHashSet<>();
-        for (Long rideId : new LinkedHashSet<>(rideIds)) {
-            if (rideId == null) {
-                continue;
+        Set<Long> distinctRideIds = new LinkedHashSet<>();
+        for (Long rideId : rideIds) {
+            if (rideId != null) {
+                distinctRideIds.add(rideId);
             }
-            long lastReadMessageId = readStateRepository
-                    .findByRide_IdAndReaderEmailIgnoreCase(rideId, readerEmail)
-                    .map(RideChatReadState::getLastReadMessageId)
-                    .orElse(0L);
-            if (messageRepository.countUnreadMessages(
-                    rideId, readerEmail, lastReadMessageId) > 0) {
-                unreadRideIds.add(rideId);
+        }
+        if (distinctRideIds.isEmpty()) {
+            return Set.of();
+        }
+
+        Map<Long, Long> lastReadByRide = new HashMap<>();
+        for (RideChatReadState state : readStateRepository
+                .findByRide_IdInAndReaderEmailIgnoreCase(
+                        distinctRideIds, readerEmail)) {
+            lastReadByRide.put(
+                    state.getRide().getId(), state.getLastReadMessageId());
+        }
+
+        Set<Long> unreadRideIds = new LinkedHashSet<>();
+        for (RideLatestMessageId latest : messageRepository
+                .findLatestOtherMessageIds(distinctRideIds, readerEmail)) {
+            if (latest.rideId() != null && latest.latestMessageId() != null
+                    && latest.latestMessageId()
+                    > lastReadByRide.getOrDefault(latest.rideId(), 0L)) {
+                unreadRideIds.add(latest.rideId());
             }
         }
         return Set.copyOf(unreadRideIds);

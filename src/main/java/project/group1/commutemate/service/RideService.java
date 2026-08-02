@@ -54,6 +54,9 @@ public class RideService {
     List<Ride> result = new ArrayList<>();
 
     for (Ride ride : findAllUpcoming()) {
+        if (ride.isFull()) {
+            continue;
+        }
         String from = ride.getFrom() == null ? "" : ride.getFrom().toLowerCase(Locale.ROOT);
         String to = ride.getTo() == null ? "" : ride.getTo().toLowerCase(Locale.ROOT);
         String driver = ride.getDriver() == null ? "" : ride.getDriver().toLowerCase(Locale.ROOT);

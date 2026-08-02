@@ -5,7 +5,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +23,7 @@ import project.group1.commutemate.model.LocationCoordinates;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideLocations;
+import project.group1.commutemate.service.NotificationService;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 
@@ -37,8 +40,9 @@ public class RidesController extends AuthenticatedController {
     public RidesController(RideService rideService,
                            RideCoordinationService coordinationService,
                            CurrentUserService currentUserService,
+                           NotificationService notificationService,
                            Clock clock) {
-        super(currentUserService);
+        super(currentUserService, notificationService);
         this.rideService = rideService;
         this.coordinationService = coordinationService;
         this.clock = clock;
@@ -96,11 +100,7 @@ public class RidesController extends AuthenticatedController {
     // create rides
     @GetMapping("/rides/create")
     public String createForm(Model model) {
-        model.addAttribute("minimumDate", LocalDate.now(clock).toString());
-        model.addAttribute("communityStops", RideLocations.COMMUNITY_STOPS);
-        model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
-        model.addAttribute("defaultPickup", RideLocations.DEFAULT_PICKUP);
-        model.addAttribute("defaultDestination", RideLocations.DEFAULT_DESTINATION);
+        populateCreateForm(model);
         return "rides-create";
     }
 
@@ -121,12 +121,68 @@ public class RidesController extends AuthenticatedController {
             redirect.addFlashAttribute("successMessage", "Ride published successfully.");
             return "redirect:/dashboard/driver";
         } catch (DateTimeParseException ex) {
-            redirect.addFlashAttribute("errorMessage", "Enter a valid departure date and time.");
-            return "redirect:/rides/create";
+            return redirectCreateFormWithError(redirect, from, to, date, time, seats, price, notes,
+                    "Enter a valid departure date and time.", "date", "time");
         } catch (RideOperationException ex) {
-            redirect.addFlashAttribute("errorMessage", ex.getMessage());
-            return "redirect:/rides/create";
+            return redirectCreateFormWithError(redirect, from, to, date, time, seats, price, notes,
+                    ex.getMessage(), fieldsForCreateError(ex));
         }
+    }
+
+    private void populateCreateForm(Model model) {
+        String minimumDate = LocalDate.now(clock).toString();
+        model.addAttribute("minimumDate", minimumDate);
+        model.addAttribute("communityStops", RideLocations.COMMUNITY_STOPS);
+        model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
+        model.addAttribute("defaultPickup", RideLocations.DEFAULT_PICKUP);
+        model.addAttribute("defaultDestination", RideLocations.DEFAULT_DESTINATION);
+
+        if (!model.containsAttribute("formFrom")) {
+            model.addAttribute("formFrom", RideLocations.DEFAULT_PICKUP);
+            model.addAttribute("formTo", RideLocations.DEFAULT_DESTINATION);
+            model.addAttribute("formDate", minimumDate);
+            model.addAttribute("formTime", "08:15");
+            model.addAttribute("formSeats", 3);
+            model.addAttribute("formPrice", 4);
+            model.addAttribute("formNotes", "");
+        }
+    }
+
+    private String redirectCreateFormWithError(RedirectAttributes redirect,
+                                               String from,
+                                               String to,
+                                               String date,
+                                               String time,
+                                               int seats,
+                                               int price,
+                                               String notes,
+                                               String message,
+                                               String... fields) {
+        redirect.addFlashAttribute("formFrom", from);
+        redirect.addFlashAttribute("formTo", to);
+        redirect.addFlashAttribute("formDate", date);
+        redirect.addFlashAttribute("formTime", time);
+        redirect.addFlashAttribute("formSeats", seats);
+        redirect.addFlashAttribute("formPrice", price);
+        redirect.addFlashAttribute("formNotes", notes == null ? "" : notes);
+        redirect.addFlashAttribute("errorMessage", message);
+
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        for (String field : fields) {
+            fieldErrors.put(field, message);
+        }
+        redirect.addFlashAttribute("fieldErrors", fieldErrors);
+        return "redirect:/rides/create";
+    }
+
+    private String[] fieldsForCreateError(RideOperationException exception) {
+        return switch (exception.getErrorCode()) {
+            case LOCATION_REQUIRED, SAME_ROUTE -> new String[]{"from", "to"};
+            case DEPARTURE_INVALID -> new String[]{"date", "time"};
+            case SEATS_INVALID -> new String[]{"seats"};
+            case PRICE_INVALID -> new String[]{"price"};
+            default -> new String[0];
+        };
     }
 
     // delete rides

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Notifications — CommuteMate',
+  'Updates about your ride requests, confirmations, and completed rides.')}"></head>
+<body>
+<div class="flex min-h-screen flex-col bg-background">
+
+  <header th:replace="~{fragments/layout :: nav('')}"></header>
+
+  <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+    <div>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-primary">Notifications</p>
+          <h1 class="mt-1 font-display text-3xl font-semibold tracking-tight">Updates</h1>
+        </div>
+        <form method="post" th:action="@{/notifications/read}" th:if="${!notifications.isEmpty()}">
+          <button type="submit" class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">Mark all as read</button>
+        </form>
+      </div>
+
+      <div class="mt-8 space-y-3">
+        <p th:if="${notifications.isEmpty()}" class="text-sm text-muted-foreground">
+          No notifications yet — you'll see updates here when riders request seats,
+          drivers confirm or reject requests, and when rides are completed.
+        </p>
+
+        <div th:each="notification : ${notifications}"
+             class="rounded-xl border border-border bg-card p-4"
+             th:classappend="${!notification.read} ? 'border-primary/40 bg-primary/5' : ''">
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-sm" th:text="${notification.message}">Notification message</p>
+            <span th:if="${!notification.read}" class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"></span>
+          </div>
+          <div class="mt-2 flex items-center gap-3">
+            <p class="text-xs text-muted-foreground" th:text="${#temporals.format(notification.createdAt, 'MMM d, h:mm a')}">Jul 21, 7:50 AM</p>
+            <form th:if="${notification.relatedRideId != null and !closedRideIds.contains(notification.relatedRideId)}"
+                  method="post" th:action="@{/notifications/{id}/view(id=${notification.id})}">
+              <button type="submit" class="text-xs font-medium text-primary hover:underline">View ride</button>
+            </form>
+            <span th:if="${notification.relatedRideId != null and closedRideIds.contains(notification.relatedRideId)}"
+                  class="text-xs font-medium text-destructive">Ride closed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
+</div>
+
+<!-- Some browsers (Safari especially) restore this page from an in-memory
+     snapshot on browser Back/Forward instead of asking the server again —
+     Cache-Control alone doesn't reliably prevent that. This forces a real
+     reload whenever that happens, so the notification list and unread
+     count are never stale after "View ride" → Back. -->
+<script>
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  });
+</script>
+</body>
+</html>

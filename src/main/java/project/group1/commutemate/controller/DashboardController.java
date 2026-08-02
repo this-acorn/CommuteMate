@@ -13,6 +13,7 @@ import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideRequest;
+import project.group1.commutemate.service.NotificationService;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 import project.group1.commutemate.service.TransitService;
@@ -31,10 +32,11 @@ public class DashboardController extends AuthenticatedController {
     public DashboardController(RideService rideService,
                                RideCoordinationService coordinationService,
                                CurrentUserService currentUserService,
+                               NotificationService notificationService,
                                Clock clock,
                                TransitService transitService,
                                WeatherService weatherService) {
-        super(currentUserService);
+        super(currentUserService, notificationService);
         this.rideService = rideService;
         this.coordinationService = coordinationService;
         this.clock = clock;
@@ -48,8 +50,10 @@ public class DashboardController extends AuthenticatedController {
         Profile profile = requireCurrentProfile();
         LocalDateTime now = LocalDateTime.now(clock);
         List<RideRequest> requests = coordinationService.findRequestsForRider(profile.getEmail());
+        // Includes BOARDING_CONFIRMED so the ride stays visible after boarding.
         Ride nextConfirmedRide = requests.stream()
-                .filter(request -> request.getStatus() == RequestStatus.CONFIRMED)
+                .filter(request -> request.getStatus() == RequestStatus.CONFIRMED
+                        || request.getStatus() == RequestStatus.BOARDING_CONFIRMED)
                 .map(RideRequest::getRide)
                 .filter(ride -> ride.getDepartAt() != null && ride.getDepartAt().isAfter(now))
                 .min((first, second) -> first.getDepartAt().compareTo(second.getDepartAt()))
@@ -78,13 +82,24 @@ public class DashboardController extends AuthenticatedController {
     public String driverDashboard(Model model) {
         Profile profile = requireCurrentProfile();
         LocalDateTime now = LocalDateTime.now(clock);
-        List<Ride> myRides = rideService.findUpcomingByDriverEmail(profile.getEmail());
+        List<Ride> myRides = new java.util.ArrayList<>(
+                rideService.findUpcomingByDriverEmail(profile.getEmail()));
+        // Epic 4: a ride may have already departed by the time the driver
+        // needs to click "Arrived", so surface those too, even though
+        // they're no longer "upcoming".
+        for (Ride awaitingArrival : coordinationService.findRidesAwaitingArrival(profile.getEmail())) {
+            if (myRides.stream().noneMatch(r -> r.getId().equals(awaitingArrival.getId()))) {
+                myRides.add(awaitingArrival);
+            }
+        }
         List<RideRequest> requests = coordinationService.findRequestsForDriver(profile.getEmail());
 
         model.addAttribute("now", now);
         model.addAttribute("myRides", myRides);
         model.addAttribute("driverRequests", requests);
         model.addAttribute("upcomingRideCount", myRides.size());
+        // Issue #25: driver dashboard previously showed hardcoded points/eco-score.
+        model.addAttribute("profile", profile);
         model.addAttribute("confirmedRiderCount", requests.stream()
                 .filter(request -> request.getStatus() == RequestStatus.CONFIRMED)
                 .count());

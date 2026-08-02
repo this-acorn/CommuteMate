@@ -50,6 +50,21 @@ class AuthRoleChoiceViewTest {
     }
 
     @Test
+    void loginFormCanBeSubmittedWithTheEnterKey() throws Exception {
+        String html = mockMvc.perform(get("/auth"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // A normal POST form with a submit button is submitted by the browser
+        // when Enter is pressed in the email or password field.
+        assertTrue(html.contains("method=\"post\""));
+        assertTrue(html.contains("action=\"/login\""));
+        assertTrue(html.contains("<button type=\"submit\""));
+    }
+
+    @Test
     void signUpOffersRiderAndDriverOnly() throws Exception {
         String html = signUpPage();
 

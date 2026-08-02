@@ -34,9 +34,9 @@ public class CurrentUserService {
         }
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(u -> {
-                    // Epic 4 draft: was hardcoded to 0, 0 before — now backed by
-                    // RewardService, keyed by email. Single query via
-                    // RewardSummary instead of two separate calls (review feedback).
+                    // Epic 4: completion-based rewards, resolved from draft.
+                    // Keyed by email. Single query via RewardSummary instead
+                    // of two separate calls (review feedback).
                     RewardSummary reward = rewardService.summaryForDriver(u.getEmail());
                     return new Profile(
                             u.getEmail(),

@@ -47,12 +47,17 @@
               <p class="mt-1 text-xs text-muted-foreground" th:text="${request.ride.departDate} + ' · ' + ${request.ride.departTime}">Tomorrow · 8:00 AM</p>
             </div>
             <span class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  th:classappend="${request.status.name() == 'CONFIRMED'} ? 'bg-emerald-500/10 text-emerald-800' : (${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : 'bg-secondary text-muted-foreground')"
+                  th:classappend="${request.status.name() == 'CONFIRMED' or request.status.name() == 'BOARDING_CONFIRMED' or request.status.name() == 'COMPLETED'} ? 'bg-emerald-500/10 text-emerald-800' : (${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : 'bg-secondary text-muted-foreground')"
                   th:text="${request.status.label()}">Pending</span>
           </div>
           <p class="mt-3 text-sm text-muted-foreground" th:text="'Driver: ' + ${request.ride.driver}">Driver: Demo Driver</p>
           <div class="mt-4 flex items-center gap-2">
             <a th:href="@{/rides/{id}(id=${request.ride.id})}" class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">View ride</a>
+            <!-- Epic 4: post-ride workflow, step 1. Only shown once the
+                 ride is within 30 minutes of departure. -->
+            <form th:if="${request.status.name() == 'CONFIRMED' and !now.isBefore(request.ride.departAt.minusMinutes(30))}" method="post" th:action="@{/ride-requests/{id}/board(id=${request.id})}">
+              <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">Confirm boarding</button>
+            </form>
             <form th:if="${(request.status.name() == 'PENDING' or request.status.name() == 'CONFIRMED') and request.ride.departAt.isAfter(now)}" method="post" th:action="@{/ride-requests/{id}/cancel(id=${request.id})}">
               <button type="submit" class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">Cancel request</button>
             </form>
@@ -178,23 +183,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Service alerts: still rendered when the departures feed is down. -->
-          <div th:if="${transit != null}" class="mt-4 border-t border-border pt-3">
-            <p class="text-xs font-medium text-muted-foreground">Service alerts</p>
-            <!-- The alerts feed failed on its own: don't claim there are no alerts when we could not check. -->
-            <p th:if="${!transit.alertsAvailable()}" class="mt-1 text-xs text-destructive">
-              Service alerts are temporarily unavailable.
-            </p>
-            <p th:if="${transit.alertsAvailable() and #lists.isEmpty(transit.alerts())}" class="mt-1 text-xs text-muted-foreground">
-              No alerts affecting these routes.
-            </p>
-            <div th:each="alert : ${transit.alerts()}"
-                 class="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
-              <p class="font-semibold" th:text="${alert.title()}">Service alert</p>
-              <p th:if="${!#strings.isEmpty(alert.description())}" class="mt-0.5" th:text="${alert.description()}">Details</p>
             </div>
           </div>
         </div>

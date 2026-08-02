@@ -12,7 +12,9 @@
        class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
       <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg> Back to driver dashboard
     </a>
-    <div th:if="${errorMessage}" class="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" th:text="${errorMessage}"></div>
+    <div th:if="${errorMessage != null and (fieldErrors == null or fieldErrors.isEmpty())}"
+         class="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+         th:text="${errorMessage}"></div>
     <h1 class="mt-3 font-display text-3xl font-semibold tracking-tight md:text-4xl">
       Offer a new ride
     </h1>
@@ -29,59 +31,84 @@
             <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" /></svg>
               <select id="from" name="from" required="required"
+                      th:classappend="${fieldErrors != null and fieldErrors.containsKey('from')} ? ' field-error' : ''"
+                      th:attr="aria-invalid=${fieldErrors != null and fieldErrors.containsKey('from')}"
                       class="flex h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent pl-9 pr-9 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
                 <optgroup label="Transit hubs &amp; neighbourhoods">
                   <option th:each="stop : ${communityStops}" th:value="${stop}" th:text="${stop}"
-                          th:selected="${stop == defaultPickup}"></option>
+                          th:selected="${stop == formFrom}"></option>
                 </optgroup>
                 <optgroup label="SFU Burnaby campus">
                   <option th:each="stop : ${campusStops}" th:value="${stop}" th:text="${stop}"
-                          th:selected="${stop == defaultPickup}"></option>
+                          th:selected="${stop == formFrom}"></option>
                 </optgroup>
               </select>
               <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </div>
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('from')}"
+               th:text="${fieldErrors.get('from')}">Pickup error</p>
           </div>
           <div class="space-y-1.5 sm:col-span-2">
             <label for="to" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Destination</label>
             <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" /></svg>
               <select id="to" name="to" required="required"
+                      th:classappend="${fieldErrors != null and fieldErrors.containsKey('to')} ? ' field-error' : ''"
+                      th:attr="aria-invalid=${fieldErrors != null and fieldErrors.containsKey('to')}"
                       class="flex h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent pl-9 pr-9 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
                 <optgroup label="SFU Burnaby campus">
                   <option th:each="stop : ${campusStops}" th:value="${stop}" th:text="${stop}"
-                          th:selected="${stop == defaultDestination}"></option>
+                          th:selected="${stop == formTo}"></option>
                 </optgroup>
                 <optgroup label="Transit hubs &amp; neighbourhoods">
                   <option th:each="stop : ${communityStops}" th:value="${stop}" th:text="${stop}"
-                          th:selected="${stop == defaultDestination}"></option>
+                          th:selected="${stop == formTo}"></option>
                 </optgroup>
               </select>
               <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </div>
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('to')}"
+               th:text="${fieldErrors.get('to')}">Destination error</p>
           </div>
           <div class="space-y-1.5">
             <label for="date" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Date</label>
-            <input id="date" name="date" type="date" th:min="${minimumDate}" th:value="${minimumDate}" required="required"
+            <input id="date" name="date" type="date" th:min="${minimumDate}" th:value="${formDate}" required="required"
+                   th:classappend="${fieldErrors != null and fieldErrors.containsKey('date')} ? ' field-error' : ''"
+                   th:attr="aria-invalid=${fieldErrors != null and fieldErrors.containsKey('date')}"
                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('date')}"
+               th:text="${fieldErrors.get('date')}">Date error</p>
           </div>
           <div class="space-y-1.5">
             <label for="time" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Departure</label>
-            <input id="time" name="time" type="time" value="08:15" required="required"
+            <input id="time" name="time" type="time" th:value="${formTime}" required="required"
+                   th:classappend="${fieldErrors != null and fieldErrors.containsKey('time')} ? ' field-error' : ''"
+                   th:attr="aria-invalid=${fieldErrors != null and fieldErrors.containsKey('time')}"
                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('time')}"
+               th:text="${fieldErrors.get('time')}">Time error</p>
           </div>
           <div class="space-y-1.5">
-            <span class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Seats available: <span class="font-semibold" data-seats-label="data-seats-label">3</span></span>
-            <input type="range" name="seats" min="1" max="5" value="3" class="w-full accent-primary" />
+            <span class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Seats available: <span class="font-semibold" data-seats-label="data-seats-label" th:text="${formSeats}">3</span></span>
+            <input type="range" name="seats" min="1" max="5" th:value="${formSeats}"
+                   th:classappend="${fieldErrors != null and fieldErrors.containsKey('seats')} ? ' field-error' : ''"
+                   class="w-full accent-primary" />
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('seats')}"
+               th:text="${fieldErrors.get('seats')}">Seats error</p>
           </div>
           <div class="space-y-1.5">
-            <span class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Price per seat: <span class="font-semibold" data-price-label="data-price-label">$4</span></span>
-            <input type="range" name="price" min="0" max="10" value="4" class="w-full accent-primary" />
+            <span class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Price per seat: <span class="font-semibold" data-price-label="data-price-label" th:text="${'$' + formPrice}">$4</span></span>
+            <input type="range" name="price" min="0" max="10" th:value="${formPrice}"
+                   th:classappend="${fieldErrors != null and fieldErrors.containsKey('price')} ? ' field-error' : ''"
+                   class="w-full accent-primary" />
+            <p class="text-xs text-destructive" th:if="${fieldErrors != null and fieldErrors.containsKey('price')}"
+               th:text="${fieldErrors.get('price')}">Price error</p>
           </div>
           <div class="space-y-1.5 sm:col-span-2">
             <label for="notes" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Notes for riders (optional)</label>
             <textarea id="notes" name="notes" rows="3"
                       placeholder="Meet at the Kiss &amp; Ride, no eating in car please."
+                      th:text="${formNotes}"
                       class="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"></textarea>
           </div>
         </div>
@@ -98,11 +125,11 @@
         <div class="rounded-2xl border border-border bg-card p-5 card-lift">
           <h3 class="font-display text-base font-semibold">Ride preview</h3>
           <div class="mt-3 space-y-2 text-sm">
-            <p class="font-medium" data-preview-route="data-preview-route">Metrotown Station → SFU Burnaby — AQ</p>
-            <p class="text-muted-foreground" data-preview-when="data-preview-when" th:text="${minimumDate} + ' at 08:15'">Upcoming at 08:15</p>
+            <p class="font-medium" data-preview-route="data-preview-route" th:text="${formFrom + ' → ' + formTo}">Metrotown Station → SFU Burnaby — AQ</p>
+            <p class="text-muted-foreground" data-preview-when="data-preview-when" th:text="${formDate + ' at ' + formTime}">Upcoming at 08:15</p>
             <div class="flex items-center gap-2 pt-2">
               <svg class="h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><path d="M16 3.128a4 4 0 0 1 0 7.744" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" /></svg>
-              <span data-preview-seats="data-preview-seats">3 seats</span>
+              <span data-preview-seats="data-preview-seats" th:text="${formSeats + (formSeats == 1 ? ' seat' : ' seats')}">3 seats</span>
             </div>
           </div>
         </div>

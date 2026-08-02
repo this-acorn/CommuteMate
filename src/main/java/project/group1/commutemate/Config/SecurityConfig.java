@@ -24,6 +24,10 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final RequestMatcher CHAT_MESSAGE_ENDPOINT =
+            PathPatternRequestMatcher.withDefaults()
+                    .matcher("/rides/{rideId}/chat/messages");
+
     /**
      * Signs the remember-me cookie. It has to stay the same across restarts —
      * Spring Security otherwise invents a random key at startup, which would
@@ -65,13 +69,9 @@ public class SecurityConfig {
     /** Return a signed-in member to the dashboard allowed for their role. */
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
-        RequestMatcher chatMessageEndpoint = PathPatternRequestMatcher
-                .withDefaults()
-                .matcher("/rides/{rideId}/chat/messages");
-
         return (request, response, exception) -> {
             // Fetch-based chat calls must receive a real HTTP status.
-            if (chatMessageEndpoint.matches(request)) {
+            if (CHAT_MESSAGE_ENDPOINT.matches(request)) {
                 response.sendError(HttpStatus.FORBIDDEN.value());
                 return;
             }
@@ -91,10 +91,6 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        RequestMatcher chatMessageEndpoint = PathPatternRequestMatcher
-                .withDefaults()
-                .matcher("/rides/{rideId}/chat/messages");
-
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/auth", "/register", "/login",
@@ -123,9 +119,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/ride-requests/*/board")
                         .hasRole("RIDER")
                 // Chat features
-                .requestMatchers(
-                        "/rides/*/chat",
-                        "/rides/*/chat/messages")
+                .requestMatchers("/rides/*/chat")
+                        .authenticated()
+                .requestMatchers(CHAT_MESSAGE_ENDPOINT)
                         .authenticated()
                 .anyRequest().authenticated()
             )
@@ -150,7 +146,7 @@ public class SecurityConfig {
                 // of being redirected to a dashboard or login page.
                 .defaultAuthenticationEntryPointFor(
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                        chatMessageEndpoint)
+                        CHAT_MESSAGE_ENDPOINT)
                 .accessDeniedHandler(accessDeniedHandler())
             )
             .logout(logout -> logout

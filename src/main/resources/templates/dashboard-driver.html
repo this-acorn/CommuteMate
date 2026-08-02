@@ -102,7 +102,9 @@
               <button type="submit" class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">Reject</button>
             </form>
           </div>
-          <a th:if="${request.status.name() == 'CONFIRMED'}"
+          <a th:if="${request.status.name() == 'CONFIRMED'
+                  or request.status.name() == 'BOARDING_CONFIRMED'
+                  or request.status.name() == 'COMPLETED'}"
              th:href="@{/rides/{id}/chat(id=${request.ride.id})}"
              class="mt-4 inline-flex items-center justify-center rounded-md bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-accent">
             Open ride chat

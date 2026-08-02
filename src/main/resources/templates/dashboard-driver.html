@@ -48,16 +48,18 @@
           <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></svg>
           Points earned
         </div>
-        <div class="mt-3 text-3xl font-semibold tracking-tight">240</div>
-        <div class="mt-1 text-xs text-muted-foreground">60 to next reward</div>
+        <div class="mt-3 text-3xl font-semibold tracking-tight" th:text="${profile.points}">0</div>
+        <div class="mt-1 text-xs text-muted-foreground">From completed rides</div>
       </div>
       <div class="rounded-2xl border border-border bg-card p-5 card-lift">
         <div class="flex items-center gap-2 text-sm text-muted-foreground">
           <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" /><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" /></svg>
           Eco-Score
         </div>
-        <div class="mt-3 text-3xl font-semibold tracking-tight">82</div>
-        <div class="mt-1 text-xs text-emerald-700">Top 12% of drivers</div>
+        <div class="mt-3 text-3xl font-semibold tracking-tight"
+             th:text="${profile.points == 0} ? '—' : ${profile.ecoScore}">0</div>
+        <div class="mt-1 text-xs text-emerald-700"
+             th:text="${profile.points == 0} ? 'No completed rides yet' : 'Average across completed rides'">Top 12% of drivers</div>
       </div>
     </div>
 
@@ -85,7 +87,7 @@
               <p class="text-xs text-muted-foreground" th:text="${request.riderEmail}">rider@sfu.ca</p>
             </div>
             <span class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  th:classappend="${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : (${request.status.name() == 'CONFIRMED'} ? 'bg-emerald-500/10 text-emerald-800' : 'bg-secondary text-muted-foreground')"
+                  th:classappend="${request.status.name() == 'PENDING'} ? 'bg-amber-500/10 text-amber-800' : (${request.status.name() == 'CONFIRMED' or request.status.name() == 'BOARDING_CONFIRMED' or request.status.name() == 'COMPLETED'} ? 'bg-emerald-500/10 text-emerald-800' : 'bg-secondary text-muted-foreground')"
                   th:text="${request.status.label()}">Pending</span>
           </div>
           <div class="mt-4 rounded-lg bg-secondary/60 p-3 text-sm">
@@ -154,6 +156,15 @@
               </span>
               <div class="ml-auto flex gap-2">
                 <a th:href="@{/rides/{id}(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">Ride details</a>
+                <!-- Epic 4: post-ride workflow, step 2. Only shown once at
+                     least one rider has confirmed boarding AND the ride's
+                     departure time has passed — the backend rejects arrival
+                     confirmation before then, so the button shouldn't invite
+                     a click that just errors. -->
+                <form th:if="${!r.requests.?[status.name() == 'BOARDING_CONFIRMED'].isEmpty() and !now.isBefore(r.departAt)}"
+                      method="post" th:action="@{/rides/{id}/arrived(id=${r.id})}">
+                  <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">Arrived</button>
+                </form>
                 <form method="post" th:action="@{/rides/{id}/delete(id=${r.id})}" onsubmit="return confirm('Delete this ride and every related request?');">
                   <button type="submit" class="inline-flex items-center justify-center rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">Delete</button>
                 </form>
@@ -192,17 +203,11 @@
 
         <div class="rounded-2xl border border-border bg-card p-5 card-lift">
           <h3 class="font-display text-base font-semibold">Your rating</h3>
-          <div class="mt-3 flex items-center gap-3">
-            <div class="text-3xl font-semibold">4.9</div>
-            <div class="flex text-primary">
-              <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></svg>
-              <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></svg>
-              <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></svg>
-              <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></svg>
-              <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></svg>
-            </div>
-          </div>
-          <p class="mt-2 text-xs text-muted-foreground">Based on 27 rides · 24 five-star</p>
+          <!-- Issue #25: there's no driver-rating system in the app yet
+               (no data anywhere backs a real average) — showing an honest
+               empty state instead of a fabricated number, per the issue's
+               "appropriate empty state" guidance. -->
+          <p class="mt-3 text-sm text-muted-foreground">No ratings yet — they'll show up here once riders start rating your rides.</p>
         </div>
       </aside>
     </div>

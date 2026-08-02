@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import project.group1.commutemate.exception.RideOperationException;
+import project.group1.commutemate.exception.RideOperationException.ErrorCode;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideLocations;
 import project.group1.commutemate.repository.RideRepository;
@@ -39,9 +40,25 @@ public class RideService {
                 driverEmail, now());
     }
 
+    // Epic 4: all-time lookup (no departAt filter) so completed rides keep
+    // counting toward a driver's reward total. See RewardService.
+    public List<Ride> findByDriverEmail(String driverEmail) {
+        if (driverEmail == null || driverEmail.isBlank()) {
+            return List.of();
+        }
+        return rideRepository.findByDriverEmailIgnoreCase(driverEmail);
+    }
+
     public Ride findById(Long id) {
         return rideRepository.findById(id)
-                .orElseThrow(() -> new RideOperationException("Ride not found."));
+                .orElseThrow(() -> new RideOperationException(ErrorCode.RIDE_NOT_FOUND, "Ride not found."));
+    }
+
+    // lets callers check without catching an exception — used by
+    // the notifications list to show "ride no longer available" instead of
+    // a clickable link that would just redirect away with an error.
+    public boolean exists(Long id) {
+        return id != null && rideRepository.existsById(id);
     }
 
     public List<Ride> search(String query, String sort) {
@@ -90,26 +107,32 @@ public class RideService {
     private void validateOwner(String driverEmail, String driverName) {
         if (driverEmail == null || driverEmail.isBlank()
                 || driverName == null || driverName.isBlank()) {
-            throw new RideOperationException("A signed-in driver is required to create a ride.");
+            throw new RideOperationException(ErrorCode.DRIVER_REQUIRED,
+                    "A signed-in driver is required to create a ride.");
         }
     }
 
     // from/to are already canonical here: null means the value was missing or off the list
     private void validateCreate(String from, String to, LocalDateTime departAt, int seats, int price) {
         if (from == null || to == null) {
-            throw new RideOperationException("Choose a pickup and destination from the list.");
+            throw new RideOperationException(ErrorCode.LOCATION_REQUIRED,
+                    "Choose a pickup and destination from the list.");
         }
         if (from.equalsIgnoreCase(to)) {
-            throw new RideOperationException("Pickup and destination must be different.");
+            throw new RideOperationException(ErrorCode.SAME_ROUTE,
+                    "Pickup and destination must be different.");
         }
         if (departAt == null || !departAt.isAfter(now())) {
-            throw new RideOperationException("Departure must be in the future.");
+            throw new RideOperationException(ErrorCode.DEPARTURE_INVALID,
+                    "Departure must be in the future.");
         }
         if (seats < 1 || seats > 5) {
-            throw new RideOperationException("Seats must be between 1 and 5.");
+            throw new RideOperationException(ErrorCode.SEATS_INVALID,
+                    "Seats must be between 1 and 5.");
         }
         if (price < 0 || price > 10) {
-            throw new RideOperationException("Price must be between $0 and $10.");
+            throw new RideOperationException(ErrorCode.PRICE_INVALID,
+                    "Price must be between $0 and $10.");
         }
     }
 

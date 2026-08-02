@@ -19,7 +19,7 @@ public class RegisterRequest {
     private String password;
 
     @NotBlank(message = "Please select whether you are a rider or driver")
-    @Pattern(regexp = "(?i)rider|driver",
+    @Pattern(regexp = "^(?:\\s*|(?i:rider|driver))$",
              message = "Role must be rider or driver")
     private String role;
 

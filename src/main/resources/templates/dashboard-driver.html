@@ -106,7 +106,7 @@
                   or request.status.name() == 'BOARDING_CONFIRMED'
                   or request.status.name() == 'COMPLETED'}"
              th:href="@{/rides/{id}/chat(id=${request.ride.id})}"
-             class="mt-4 inline-flex items-center justify-center rounded-md bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-accent">
+             class="mt-4 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
             Open ride chat
           </a>
         </article>
@@ -162,7 +162,7 @@
                 <svg class="mr-0.5 inline h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" /><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" /></svg> <span th:text="'Eco ' + ${r.ecoScore}">Eco 82</span>
               </span>
               <div class="ml-auto flex gap-2">
-                <a th:href="@{/rides/{id}/chat(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs bg-primary/10 text-primary hover:bg-accent h-8 px-3">Ride chat</a>
+                <a th:href="@{/rides/{id}/chat(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">Ride chat</a>
                 <a th:href="@{/rides/{id}(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">Ride details</a>
                 <!-- Epic 4: post-ride workflow, step 2. Only shown once at
                      least one rider has confirmed boarding AND the ride's

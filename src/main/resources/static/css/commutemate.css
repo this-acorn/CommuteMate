@@ -1302,16 +1302,16 @@
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  border: 1px solid hsl(var(--input));
+  border: 1px solid var(--input);
   border-radius: 1.35rem;
-  background: hsl(var(--background));
+  background: var(--background);
   padding: 0.35rem 0.4rem 0.35rem 0.9rem;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 .chat-compose-bar:focus-within {
-  border-color: hsl(var(--ring));
-  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.14);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 14%, transparent);
 }
 .chat-compose textarea {
   display: block;
@@ -1323,7 +1323,7 @@
   border: 0;
   background: transparent;
   padding: 0.62rem 0;
-  color: hsl(var(--foreground));
+  color: var(--foreground);
   font: inherit;
   line-height: 1.35;
 }
@@ -1331,7 +1331,7 @@
   outline: none;
 }
 .chat-compose textarea::placeholder {
-  color: hsl(var(--muted-foreground));
+  color: var(--muted-foreground);
 }
 .chat-send-button {
   min-width: 4.5rem;

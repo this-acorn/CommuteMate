@@ -20,18 +20,28 @@
          class="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
          th:text="${errorMessage}"></div>
 
-    <div class="mt-6">
-      <section class="mx-auto max-w-4xl rounded-2xl border border-border bg-card p-6 card-lift">
+    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+      <section class="lg:col-span-2 rounded-2xl border border-border bg-card p-6 card-lift">
         <div class="flex flex-wrap items-start justify-between gap-4 border-b border-border" style="padding-bottom: 1.25rem;">
-          <div>
-            <p class="text-sm font-medium text-primary">Ride conversation</p>
-            <h1 class="mt-1 font-display text-2xl font-semibold tracking-tight"
-                th:text="${chat.ride.from + ' → ' + chat.ride.to}">Metrotown → SFU Burnaby</h1>
-            <p class="mt-1 text-sm text-muted-foreground"
-               th:text="${chat.ride.departDate + ' · ' + chat.ride.departTime}">Jul 25, 2026 · 8:00 AM</p>
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-full bg-primary text-primary-foreground text-sm font-semibold"
+                 th:text="${chat.ride.driverInitials}">DD</div>
+            <div>
+              <p class="font-display text-xl font-semibold" th:text="${chat.ride.driver}">Demo Driver</p>
+              <p class="text-sm text-muted-foreground"
+                 th:text="${chat.ride.car} + ' · ' + ${#numbers.formatDecimal(chat.ride.rating, 1, 1)} + '★'">Vehicle · 5★</p>
+            </div>
           </div>
           <span class="rounded-full bg-secondary px-3 py-1 text-xs font-medium"
                 th:text="${chat.owner ? 'Driver' : 'Confirmed rider'}">Confirmed rider</span>
+        </div>
+
+        <div class="mt-5">
+          <p class="text-sm font-medium text-primary">Ride conversation</p>
+          <h1 class="mt-1 font-display text-2xl font-semibold tracking-tight"
+              th:text="${chat.ride.from + ' → ' + chat.ride.to}">Metrotown → SFU Burnaby</h1>
+          <p class="mt-1 text-sm text-muted-foreground"
+             th:text="${chat.ride.departDate + ' · ' + chat.ride.departTime}">Jul 25, 2026 · 8:00 AM</p>
         </div>
 
         <div id="chat-thread" class="chat-thread mt-5 rounded-xl bg-secondary/60 p-4">
@@ -76,6 +86,42 @@
           </div>
         </form>
       </section>
+
+      <aside class="rounded-2xl border border-border bg-card p-6 card-lift">
+        <h2 class="font-display text-lg font-semibold">Ride details</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Use the chat to coordinate only with confirmed participants of this ride.</p>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <p class="text-xs font-medium text-muted-foreground">Pickup</p>
+            <p class="mt-1 font-semibold" th:text="${chat.ride.from}">Metrotown</p>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-muted-foreground">Destination</p>
+            <p class="mt-1 font-semibold" th:text="${chat.ride.to}">SFU Burnaby</p>
+          </div>
+
+          <div class="rounded-lg bg-secondary/60 p-3">
+            <p class="text-xs text-muted-foreground">Departure</p>
+            <p class="mt-1 text-sm font-semibold"
+               th:text="${chat.ride.departDate} + ' · ' + ${chat.ride.departTime}">Tomorrow · 8:00 AM</p>
+          </div>
+          <div class="rounded-lg bg-secondary/60 p-3">
+            <p class="text-xs text-muted-foreground">Price</p>
+            <p class="mt-1 text-sm font-semibold" th:text="'$' + ${chat.ride.price} + ' per seat'">$4 per seat</p>
+          </div>
+          <div class="rounded-lg bg-secondary/60 p-3">
+            <p class="text-xs text-muted-foreground">Occupancy</p>
+            <p class="mt-1 text-sm font-semibold"
+               th:text="${chat.ride.seatsTaken} + '/' + ${chat.ride.seats} + ' confirmed'">1/4 confirmed</p>
+          </div>
+        </div>
+
+        <a th:href="@{/rides/{id}(id=${chat.ride.id})}"
+           class="mt-5 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">
+          View full ride details
+        </a>
+      </aside>
     </div>
   </main>
 </div>

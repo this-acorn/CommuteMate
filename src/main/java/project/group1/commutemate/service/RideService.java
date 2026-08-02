@@ -44,19 +44,7 @@ public class RideService {
                 .orElseThrow(() -> new RideOperationException("Ride not found."));
     }
 
-    public List<Ride> search(String query, String sort) {
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        List<Ride> result = new ArrayList<>();
-        for (Ride ride : findAllUpcoming()) {
-            String haystack = (ride.getFrom() + " " + ride.getTo() + " " + ride.getDriver())
-                    .toLowerCase(Locale.ROOT);
-            if (haystack.contains(q)) {
-                result.add(ride);
-            }
-        }
-        result.sort(comparatorFor(sort));
-        return result;
-    }
+   
 
     public List<Ride> recommended(String query, String departure, String destination, String sort) {
     String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);

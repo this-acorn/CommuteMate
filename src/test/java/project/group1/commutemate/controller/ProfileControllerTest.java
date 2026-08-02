@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Optional;
@@ -74,9 +76,11 @@ class ProfileControllerTest {
     }
 
     @Test
-    void updatingNameSavesTrimmedValue() throws Exception {
+    void updatingNameRedirectsAndShowsSuccessMessage() throws Exception {
         mockMvc.perform(post("/profile/name").param("fullName", "  Riley R. Rider  "))
-                .andExpect(status().isOk());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"))
+                .andExpect(flash().attribute("nameSuccess", "Name updated."));
 
         verify(userRepository).save(argThat(u -> "Riley R. Rider".equals(u.getFullName())));
     }
@@ -118,7 +122,7 @@ class ProfileControllerTest {
     }
 
     @Test
-    void correctCurrentPasswordUpdatesToTheEncodedNewPassword() throws Exception {
+    void correctCurrentPasswordUpdatesAndShowsSuccessMessage() throws Exception {
         when(passwordEncoder.matches("old-password", "encoded-old-password")).thenReturn(true);
         when(passwordEncoder.encode("newpass123")).thenReturn("encoded-new-password");
 
@@ -126,7 +130,9 @@ class ProfileControllerTest {
                         .param("currentPassword", "old-password")
                         .param("newPassword", "newpass123")
                         .param("confirmPassword", "newpass123"))
-                .andExpect(status().isOk());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"))
+                .andExpect(flash().attribute("passwordSuccess", "Password updated."));
 
         verify(userRepository).save(argThat(u -> "encoded-new-password".equals(u.getPassword())));
     }

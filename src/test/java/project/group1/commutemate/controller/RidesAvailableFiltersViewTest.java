@@ -21,6 +21,7 @@ import project.group1.commutemate.User.CurrentUserService;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RideLocations;
 import project.group1.commutemate.model.Role;
+import project.group1.commutemate.service.NotificationService;
 import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 
@@ -43,6 +44,9 @@ class RidesAvailableFiltersViewTest {
 
     @MockitoBean
     private RideService rideService;
+
+    @MockitoBean
+    private NotificationService notificationService;
 
     @MockitoBean
     private Clock clock;

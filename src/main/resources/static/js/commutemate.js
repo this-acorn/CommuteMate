@@ -101,8 +101,8 @@
     var empty = document.querySelector("[data-rides-empty]");
     var applyBtn = document.querySelector("[data-rides-apply]");
     var form = document.querySelector("[data-rides-filters]");
-    var departure = form ? form.querySelector("input[name='departure']") : null;
-    var destination = form ? form.querySelector("input[name='destination']") : null;
+    var departure = form ? form.querySelector("[name='departure']") : null;
+    var destination = form ? form.querySelector("[name='destination']") : null;
     var cards = Array.prototype.slice.call(grid.querySelectorAll("[data-ride]"));
 
     var fields = { q: search, departure: departure, destination: destination };
@@ -192,9 +192,16 @@
     }
 
     // All three boxes filter live, so the Apply button has nothing left to do and
-    // submitting would only cost a round trip.
+    // submitting would only cost a round trip. Departure/destination are <select>
+    // boxes, which fire "change" rather than "input" in some browsers, so listen
+    // for both.
     Object.keys(fields).forEach(function (k) {
-      if (fields[k]) fields[k].addEventListener("input", function () {
+      if (!fields[k]) return;
+      fields[k].addEventListener("input", function () {
+        apply();
+        syncHash();
+      });
+      fields[k].addEventListener("change", function () {
         apply();
         syncHash();
       });

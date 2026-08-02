@@ -7,7 +7,7 @@
 
   <header th:replace="~{fragments/layout :: nav('drive')}"></header>
 
-  <main class="mx-auto max-w-7xl px-6 py-10">
+  <main class="mx-auto max-w-7xl px-6 py-10" data-chat-dashboard>
     <div th:if="${successMessage}" class="mb-6 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800" th:text="${successMessage}"></div>
     <div th:if="${errorMessage}" class="mb-6 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" th:text="${errorMessage}"></div>
     <div class="flex flex-wrap items-end justify-between gap-4">
@@ -106,8 +106,17 @@
                   or request.status.name() == 'BOARDING_CONFIRMED'
                   or request.status.name() == 'COMPLETED'}"
              th:href="@{/rides/{id}/chat(id=${request.ride.id})}"
-             class="mt-4 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
+             data-chat-link
+             th:data-ride-id="${request.ride.id}"
+             class="relative mt-4 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
             Open ride chat
+            <span th:if="${unreadChatRideIds.contains(request.ride.id)}"
+                  data-chat-unread-dot
+                  th:data-ride-id="${request.ride.id}"
+                  class="absolute -right-1 -top-1 chat-unread-dot h-3 w-3 rounded-full ring-2 ring-background"
+                  title="Unread messages">
+              <span class="sr-only">Unread messages</span>
+            </span>
           </a>
         </article>
       </div>
@@ -162,7 +171,19 @@
                 <svg class="mr-0.5 inline h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" /><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" /></svg> <span th:text="'Eco ' + ${r.ecoScore}">Eco 82</span>
               </span>
               <div class="ml-auto flex gap-2">
-                <a th:href="@{/rides/{id}/chat(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">Ride chat</a>
+                <a th:href="@{/rides/{id}/chat(id=${r.id})}"
+                   data-chat-link
+                   th:data-ride-id="${r.id}"
+                   class="relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                  Ride chat
+                  <span th:if="${unreadChatRideIds.contains(r.id)}"
+                        data-chat-unread-dot
+                        th:data-ride-id="${r.id}"
+                        class="absolute -right-1 -top-1 chat-unread-dot h-3 w-3 rounded-full ring-2 ring-background"
+                        title="Unread messages">
+                    <span class="sr-only">Unread messages</span>
+                  </span>
+                </a>
                 <a th:href="@{/rides/{id}(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">Ride details</a>
                 <!-- Epic 4: post-ride workflow, step 2. Only shown once at
                      least one rider has confirmed boarding AND the ride's

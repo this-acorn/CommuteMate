@@ -182,6 +182,10 @@
 }
 
 /* Ride chat */
+.chat-unread-dot {
+  background: var(--destructive);
+}
+
 .chat-thread {
   max-height: 34rem;
   min-height: 18rem;

@@ -7,7 +7,7 @@
 
   <header th:replace="~{fragments/layout :: nav('ride')}"></header>
 
-  <main class="mx-auto max-w-7xl px-6 py-10">
+  <main class="mx-auto max-w-7xl px-6 py-10" data-chat-dashboard>
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p class="text-sm font-medium text-primary">Rider dashboard</p>
@@ -78,8 +78,17 @@
                     or request.status.name() == 'BOARDING_CONFIRMED'
                     or request.status.name() == 'COMPLETED'}"
                th:href="@{/rides/{id}/chat(id=${request.ride.id})}"
-               class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">
+               data-chat-link
+               th:data-ride-id="${request.ride.id}"
+               class="relative inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent">
               Ride chat
+              <span th:if="${unreadChatRideIds.contains(request.ride.id)}"
+                    data-chat-unread-dot
+                    th:data-ride-id="${request.ride.id}"
+                    class="absolute -right-1 -top-1 chat-unread-dot h-3 w-3 rounded-full ring-2 ring-background"
+                    title="Unread messages">
+                <span class="sr-only">Unread messages</span>
+              </span>
             </a>
             <!-- Epic 4: post-ride workflow, step 1.
                  Only shown once the ride is within 30 minutes of departure. -->
@@ -134,7 +143,19 @@
               </div>
             </div>
             <div class="flex gap-2">
-              <a th:href="@{/rides/{id}/chat(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm border border-input bg-background shadow-sm hover:bg-accent h-9 px-4 py-2">Ride chat</a>
+              <a th:href="@{/rides/{id}/chat(id=${r.id})}"
+                   data-chat-link
+                   th:data-ride-id="${r.id}"
+                   class="relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm border border-input bg-background shadow-sm hover:bg-accent h-9 px-4 py-2">
+                Ride chat
+                <span th:if="${unreadChatRideIds.contains(r.id)}"
+                        data-chat-unread-dot
+                        th:data-ride-id="${r.id}"
+                      class="absolute -right-1 -top-1 chat-unread-dot h-3 w-3 rounded-full ring-2 ring-background"
+                      title="Unread messages">
+                  <span class="sr-only">Unread messages</span>
+                </span>
+              </a>
               <a th:href="@{/rides/{id}(id=${r.id})}" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">View trip</a>
             </div>
           </div>

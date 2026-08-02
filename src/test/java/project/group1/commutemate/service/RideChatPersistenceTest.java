@@ -100,4 +100,36 @@ class RideChatPersistenceTest {
                 () -> chatService.openChat(ride.getId(), rider));
         assertEquals("Ride not found.", error.getMessage());
     }
+
+    @Test
+    void unreadBadgeClearsAfterParticipantOpensChat() {
+        Ride ride = rideRepository.save(new Ride(
+                "driver-unread@sfu.ca", "Unread Driver", "UD",
+                "Metrotown", "SFU Burnaby",
+                LocalDateTime.now().plusDays(2), 3, 1, 4, 20, 80,
+                "Test car", 5.0, null));
+        RideRequest request = new RideRequest(
+                ride, "rider-unread@sfu.ca", "Unread Rider");
+        request.setStatus(RequestStatus.CONFIRMED);
+        requestRepository.saveAndFlush(request);
+
+        Profile rider = new Profile(
+                "rider-unread@sfu.ca", "Unread Rider", Role.RIDER, 0, 0);
+        Profile driver = new Profile(
+                "driver-unread@sfu.ca", "Unread Driver", Role.DRIVER, 0, 0);
+
+        chatService.sendMessage(ride.getId(), rider, "I am at the pickup point.");
+        messageRepository.flush();
+
+        assertTrue(chatService.findUnreadRideIds(
+                driver, List.of(ride.getId())).contains(ride.getId()));
+
+        chatService.openChat(ride.getId(), driver);
+
+        assertTrue(chatService.findUnreadRideIds(
+                driver, List.of(ride.getId())).isEmpty());
+        assertTrue(chatService.findUnreadRideIds(
+                rider, List.of(ride.getId())).isEmpty());
+    }
+
 }

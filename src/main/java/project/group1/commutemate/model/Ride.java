@@ -80,6 +80,10 @@ public class Ride {
             cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RideMessage> messages = new ArrayList<>();
 
+    @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RideChatReadState> chatReadStates = new ArrayList<>();
+
     public Ride() {
     }
 
@@ -282,5 +286,16 @@ public class Ride {
 
     public List<RideMessage> getMessages() {
         return messages;
+    }
+
+    public void addChatReadState(RideChatReadState readState) {
+        if (readState == null) {
+            throw new IllegalArgumentException("Chat read state cannot be null.");
+        }
+        chatReadStates.add(readState);
+    }
+
+    public List<RideChatReadState> getChatReadStates() {
+        return chatReadStates;
     }
 }

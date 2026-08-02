@@ -3,9 +3,13 @@ package project.group1.commutemate.service;
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +20,11 @@ import project.group1.commutemate.exception.RideChatValidationException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
+import project.group1.commutemate.model.RideChatReadState;
 import project.group1.commutemate.model.RideChatView;
 import project.group1.commutemate.model.RideMessage;
 import project.group1.commutemate.model.RideMessageView;
+import project.group1.commutemate.repository.RideChatReadStateRepository;
 import project.group1.commutemate.repository.RideMessageRepository;
 import project.group1.commutemate.repository.RideRepository;
 import project.group1.commutemate.repository.RideRequestRepository;
@@ -41,20 +47,23 @@ public class RideChatService {
     private final RideRepository rideRepository;
     private final RideRequestRepository requestRepository;
     private final RideMessageRepository messageRepository;
+    private final RideChatReadStateRepository readStateRepository;
     private final Clock clock;
 
     public RideChatService(RideRepository rideRepository,
                            RideRequestRepository requestRepository,
                            RideMessageRepository messageRepository,
+                           RideChatReadStateRepository readStateRepository,
                            Clock clock) {
         this.rideRepository = rideRepository;
         this.requestRepository = requestRepository;
         this.messageRepository = messageRepository;
+        this.readStateRepository = readStateRepository;
         this.clock = clock;
     }
 
     /** Loads the latest message batch after confirming that the member belongs to the ride. */
-    @Transactional(readOnly = true)
+    @Transactional
     public RideChatView openChat(Long rideId, Profile member) {
         Ride ride = findRide(rideId);
         boolean owner = requireParticipant(ride, member);
@@ -62,6 +71,7 @@ public class RideChatService {
         List<RideMessage> newestFirst = new ArrayList<>(
                 messageRepository.findTop100ByRide_IdOrderByIdDesc(rideId));
         Collections.reverse(newestFirst);
+        markReadThrough(ride, member, newestFirst);
 
         List<RideMessageView> messages = newestFirst.stream()
                 .map(message -> toView(message, member))
@@ -76,7 +86,7 @@ public class RideChatService {
         requireParticipant(ride, sender);
 
         String body = normalizeBody(rawBody);
-        String email = sender.getEmail().trim().toLowerCase(Locale.ROOT);
+        String email = normalizeEmail(sender.getEmail());
         String name = sender.getFullName() == null || sender.getFullName().isBlank()
                 ? email
                 : sender.getFullName().trim();
@@ -87,19 +97,74 @@ public class RideChatService {
     }
 
     /** Returns one ID-ordered batch after the last message already displayed. */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RideMessageView> loadMessagesAfter(
             Long rideId, Profile member, Long afterId) {
         Ride ride = findRide(rideId);
         requireParticipant(ride, member);
 
         long safeAfterId = afterId == null || afterId < 0 ? 0 : afterId;
-        return messageRepository
+        List<RideMessage> messages = messageRepository
                 .findTop100ByRide_IdAndIdGreaterThanOrderByIdAsc(
-                        rideId, safeAfterId)
-                .stream()
+                        rideId, safeAfterId);
+        markReadThrough(ride, member, messages);
+        return messages.stream()
                 .map(message -> toView(message, member))
                 .toList();
+    }
+
+    /** Returns the rides whose chat has at least one message this member has not read. */
+    @Transactional(readOnly = true)
+    public Set<Long> findUnreadRideIds(Profile member, Collection<Long> rideIds) {
+        if (member == null || member.getEmail() == null || member.getEmail().isBlank()
+                || rideIds == null || rideIds.isEmpty()) {
+            return Set.of();
+        }
+
+        String readerEmail = normalizeEmail(member.getEmail());
+        Set<Long> unreadRideIds = new LinkedHashSet<>();
+        for (Long rideId : new LinkedHashSet<>(rideIds)) {
+            if (rideId == null) {
+                continue;
+            }
+            long lastReadMessageId = readStateRepository
+                    .findByRide_IdAndReaderEmailIgnoreCase(rideId, readerEmail)
+                    .map(RideChatReadState::getLastReadMessageId)
+                    .orElse(0L);
+            if (messageRepository.countUnreadMessages(
+                    rideId, readerEmail, lastReadMessageId) > 0) {
+                unreadRideIds.add(rideId);
+            }
+        }
+        return Set.copyOf(unreadRideIds);
+    }
+
+    private void markReadThrough(Ride ride, Profile member, List<RideMessage> messages) {
+        long newestMessageId = messages.stream()
+                .map(RideMessage::getId)
+                .filter(Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .max()
+                .orElse(0L);
+        if (newestMessageId == 0L) {
+            return;
+        }
+
+        String readerEmail = normalizeEmail(member.getEmail());
+        RideChatReadState readState = readStateRepository
+                .findByRide_IdAndReaderEmailIgnoreCase(ride.getId(), readerEmail)
+                .orElseGet(() -> {
+                    RideChatReadState created =
+                            new RideChatReadState(ride, readerEmail, 0L);
+                    ride.addChatReadState(created);
+                    return created;
+                });
+        readState.markReadThrough(newestMessageId);
+        readStateRepository.save(readState);
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private Ride findRide(Long rideId) {

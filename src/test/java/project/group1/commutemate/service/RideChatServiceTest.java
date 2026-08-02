@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,9 +31,11 @@ import project.group1.commutemate.exception.RideChatValidationException;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
+import project.group1.commutemate.model.RideChatReadState;
 import project.group1.commutemate.model.RideChatView;
 import project.group1.commutemate.model.RideMessage;
 import project.group1.commutemate.model.Role;
+import project.group1.commutemate.repository.RideChatReadStateRepository;
 import project.group1.commutemate.repository.RideMessageRepository;
 import project.group1.commutemate.repository.RideRepository;
 import project.group1.commutemate.repository.RideRequestRepository;
@@ -57,6 +60,9 @@ class RideChatServiceTest {
     @Mock
     private RideMessageRepository messageRepository;
 
+    @Mock
+    private RideChatReadStateRepository readStateRepository;
+
     private RideChatService service;
     private Ride ride;
     private Profile driver;
@@ -65,7 +71,8 @@ class RideChatServiceTest {
     @BeforeEach
     void setUp() {
         service = new RideChatService(
-                rideRepository, requestRepository, messageRepository, CLOCK);
+                rideRepository, requestRepository, messageRepository,
+                readStateRepository, CLOCK);
         ride = new Ride("driver@sfu.ca", "Demo Driver", "DD", "Metrotown", "SFU",
                 LocalDateTime.now(CLOCK).plusDays(1), 3, 1, 4, 20, 80,
                 "Test car", 5.0, null);
@@ -324,4 +331,37 @@ class RideChatServiceTest {
         assertFalse(chat.messages().getFirst().mine());
         verifyNoInteractions(requestRepository);
     }
+
+    @Test
+    void messageFromAnotherParticipantMakesRideUnread() {
+        when(readStateRepository.findByRide_IdAndReaderEmailIgnoreCase(
+                10L, "driver@sfu.ca")).thenReturn(Optional.empty());
+        when(messageRepository.countUnreadMessages(
+                10L, "driver@sfu.ca", 0L)).thenReturn(1L);
+
+        var unreadRideIds = service.findUnreadRideIds(driver, List.of(10L));
+
+        assertEquals(Set.of(10L), unreadRideIds);
+    }
+
+    @Test
+    void openingChatStoresTheNewestDisplayedMessageAsRead() {
+        RideMessage message = new RideMessage(
+                ride, "rider@sfu.ca", "Demo Rider", "I am outside.");
+        message.setId(75L);
+        when(rideRepository.findById(10L)).thenReturn(Optional.of(ride));
+        when(messageRepository.findTop100ByRide_IdOrderByIdDesc(10L))
+                .thenReturn(List.of(message));
+        when(readStateRepository.findByRide_IdAndReaderEmailIgnoreCase(
+                10L, "driver@sfu.ca")).thenReturn(Optional.empty());
+
+        service.openChat(10L, driver);
+
+        ArgumentCaptor<RideChatReadState> state =
+                ArgumentCaptor.forClass(RideChatReadState.class);
+        verify(readStateRepository).save(state.capture());
+        assertEquals(75L, state.getValue().getLastReadMessageId());
+        assertEquals("driver@sfu.ca", state.getValue().getReaderEmail());
+    }
+
 }

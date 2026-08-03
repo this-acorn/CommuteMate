@@ -17,6 +17,8 @@ import project.group1.commutemate.User.CurrentUserService;
 import project.group1.commutemate.User.CustomUserDetailsService;
 import project.group1.commutemate.User.UserRepository;
 import project.group1.commutemate.service.NotificationService;
+import project.group1.commutemate.service.RideCoordinationService;
+import project.group1.commutemate.service.RideService;
 
 /**
  * Unlike ProfileControllerTest, this suite leaves Spring Security's filter
@@ -46,6 +48,12 @@ class ProfileSecurityTest {
 
     @MockitoBean
     private NotificationService notificationService;
+    
+    @MockitoBean
+    private RideService rideService;
+
+    @MockitoBean
+    private RideCoordinationService rideCoordinationService;
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;

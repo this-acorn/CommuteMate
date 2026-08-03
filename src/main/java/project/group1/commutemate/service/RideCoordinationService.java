@@ -209,6 +209,22 @@ public class RideCoordinationService {
         return !now().isBefore(windowStart);
     }
 
+    // Epic 1: mirrors RideService.renameDriver — RideRequest.riderName is
+    // copied from the rider's profile at request-creation time, so it also
+    // goes stale after a name change unless we update it here too.
+    @Transactional
+    public void renameRider(String riderEmail, String newFullName) {
+        List<RideRequest> requests =
+                requestRepository.findByRiderEmailIgnoreCaseOrderByUpdatedAtDesc(riderEmail);
+        if (requests.isEmpty()) {
+            return;
+        }
+        for (RideRequest request : requests) {
+            request.setRiderName(newFullName);
+        }
+        requestRepository.saveAll(requests);
+    }
+
     // Finds all requests for a rider
     public List<RideRequest> findRequestsForRider(String riderEmail) {
         if (riderEmail == null || riderEmail.isBlank()) {

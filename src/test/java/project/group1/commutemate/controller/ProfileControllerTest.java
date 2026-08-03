@@ -30,6 +30,8 @@ import project.group1.commutemate.User.UserRepository;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Role;
 import project.group1.commutemate.service.NotificationService;
+import project.group1.commutemate.service.RideCoordinationService;
+import project.group1.commutemate.service.RideService;
 
 @WebMvcTest(controllers = ProfileController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -51,6 +53,12 @@ class ProfileControllerTest {
 
     @MockitoBean
     private NotificationService notificationService;
+
+    @MockitoBean
+    private RideService rideService;
+
+    @MockitoBean
+    private RideCoordinationService rideCoordinationService;
 
     private User storedUser;
 

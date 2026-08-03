@@ -66,11 +66,25 @@ class RidesAvailableFiltersViewTest {
                 .getResponse()
                 .getContentAsString();
 
-        assertTrue(html.contains("<select name=\"departure\""), "departure should be a list");
-        assertTrue(html.contains("<select name=\"destination\""), "destination should be a list");
+        String departureList = selectNamed(html, "departure");
+        String destinationList = selectNamed(html, "destination");
 
         for (String stop : RideLocations.ALL) {
-            assertTrue(html.contains("<option value=\"" + stop + "\""), "missing option: " + stop);
+            String option = "<option value=\"" + stop + "\"";
+            assertTrue(departureList.contains(option), "departure is missing option: " + stop);
+            assertTrue(destinationList.contains(option), "destination is missing option: " + stop);
         }
+    }
+
+    /**
+     * The markup of one dropdown only. Searching the whole page instead would let a
+     * dropdown that lost its options pass on the options of the other one.
+     */
+    private static String selectNamed(String html, String name) {
+        int start = html.indexOf("<select name=\"" + name + "\"");
+        assertTrue(start >= 0, name + " should be a list");
+        int end = html.indexOf("</select>", start);
+        assertTrue(end > start, name + " list should be closed");
+        return html.substring(start, end);
     }
 }

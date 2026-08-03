@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import project.group1.commutemate.Config.SecurityConfig;
 import project.group1.commutemate.User.CurrentUserService;
@@ -48,7 +49,7 @@ class ProfileSecurityTest {
 
     @MockitoBean
     private NotificationService notificationService;
-    
+
     @MockitoBean
     private RideService rideService;
 
@@ -60,7 +61,7 @@ class ProfileSecurityTest {
 
     @Test
     void anonymousRequestToProfileIsRedirectedToLogIn() throws Exception {
-        mockMvc.perform(get("/profile"))
+        mockMvc.perform(get("/profile").accept(MediaType.TEXT_HTML))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/auth"));
     }

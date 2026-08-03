@@ -118,7 +118,7 @@
     var departure = form ? form.querySelector("input[name='departure']") : null;
     var destination = form ? form.querySelector("input[name='destination']") : null;
     var cards = Array.prototype.slice.call(grid.querySelectorAll("[data-ride]"));
-
+    var recommendedOrder = cards.slice();
     var fields = { q: search, departure: departure, destination: destination };
 
     // The server filters on these too, so arriving with them in the URL renders a
@@ -179,7 +179,7 @@
       var visible = 0;
 
       var ordered = currentSort === "Recommended"
-    ? cards.slice()
+    ? recommendedOrder.slice()
     : cards.slice().sort(sorters[currentSort] || sorters.Departure);
       ordered.forEach(function (card) {
         var match = str(card, "search").indexOf(q) !== -1

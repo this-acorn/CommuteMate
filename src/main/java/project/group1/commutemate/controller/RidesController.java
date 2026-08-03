@@ -76,6 +76,8 @@ public class RidesController extends AuthenticatedController {
     model.addAttribute("destination", destination == null ? "" : destination);
     model.addAttribute("sort", sort);
     model.addAttribute("sortOptions", SORT_OPTIONS);
+    model.addAttribute("communityStops", RideLocations.COMMUNITY_STOPS);
+    model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
     return "rides-available";
 }
         private boolean hasText(String value) {

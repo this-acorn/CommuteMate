@@ -162,6 +162,51 @@ void recommendedDoesNotIncludeFullRides() {
     assertEquals(List.of(available), result);
 }
 
+@Test
+void recommendedRanksByRatingWhenSeatsAndEcoScoreTie() {
+    Ride lowerRating = ride("Metrotown Station", "SFU Burnaby - AQ",
+            4, 1, 4, 90, 4.2, 1);
+
+    Ride higherRating = ride("Lougheed Town Centre", "SFU Residence",
+            4, 1, 4, 90, 4.9, 1);
+
+    mockUpcoming(lowerRating, higherRating);
+
+    List<Ride> result = service.recommended("", "", "", "Recommended");
+
+    assertEquals(List.of(higherRating, lowerRating), result);
+}
+
+@Test
+void recommendedRanksByLowerPriceWhenSeatsEcoScoreAndRatingTie() {
+    Ride expensive = ride("Metrotown Station", "SFU Burnaby - AQ",
+            4, 1, 8, 90, 4.8, 1);
+
+    Ride cheap = ride("Lougheed Town Centre", "SFU Residence",
+            4, 1, 3, 90, 4.8, 1);
+
+    mockUpcoming(expensive, cheap);
+
+    List<Ride> result = service.recommended("", "", "", "Recommended");
+
+    assertEquals(List.of(cheap, expensive), result);
+}
+
+@Test
+void recommendedRanksByEarlierDepartureWhenOtherValuesTie() {
+    Ride later = ride("Metrotown Station", "SFU Burnaby - AQ",
+            4, 1, 4, 90, 4.8, 3);
+
+    Ride earlier = ride("Lougheed Town Centre", "SFU Residence",
+            4, 1, 4, 90, 4.8, 1);
+
+    mockUpcoming(later, earlier);
+
+    List<Ride> result = service.recommended("", "", "", "Recommended");
+
+    assertEquals(List.of(earlier, later), result);
+}
+
 private void mockUpcoming(Ride... rides) {
     when(rideRepository.findByDepartAtAfterOrderByDepartAtAsc(any(LocalDateTime.class)))
             .thenReturn(List.of(rides));

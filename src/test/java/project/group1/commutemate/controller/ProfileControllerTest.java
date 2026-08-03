@@ -71,16 +71,20 @@ class ProfileControllerTest {
         storedUser.setRole(Role.RIDER);
 
         when(currentUserService.currentProfile())
-                .thenReturn(Optional.of(new Profile(SIGNED_IN_EMAIL, "Riley Rider", Role.RIDER, 0, 0)));
+                .thenReturn(Optional.of(new Profile(SIGNED_IN_EMAIL, "Riley Rider", Role.RIDER, 42, 88)));
         when(notificationService.unreadCountFor(SIGNED_IN_EMAIL)).thenReturn(0L);
         when(userRepository.findByEmailIgnoreCase(SIGNED_IN_EMAIL)).thenReturn(Optional.of(storedUser));
     }
 
     @Test
-    void profilePageShowsCurrentName() throws Exception {
+    void profilePageShowsAccountDetails() throws Exception {
         mockMvc.perform(get("/profile"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Riley Rider")));
+                .andExpect(content().string(containsString("Riley Rider")))
+                .andExpect(content().string(containsString(SIGNED_IN_EMAIL)))
+                .andExpect(content().string(containsString("rider")))
+                .andExpect(content().string(containsString("42")))
+                .andExpect(content().string(containsString("88")));
     }
 
     @Test
@@ -124,7 +128,8 @@ class ProfileControllerTest {
                         .param("currentPassword", "old-password")
                         .param("newPassword", "newpass123")
                         .param("confirmPassword", "different123"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("do not match")));
 
         verify(userRepository, never()).save(any());
     }

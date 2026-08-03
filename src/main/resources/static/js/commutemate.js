@@ -11,11 +11,36 @@
     initAuthToggle();
     initAvailableRides();
     initCreateRide();
+    initChatUnreadIndicators();
   });
 
   function swapClasses(el, remove, add) {
     remove.forEach(function (c) { el.classList.remove(c); });
     add.forEach(function (c) { el.classList.add(c); });
+  }
+
+  function initChatUnreadIndicators() {
+    var dashboard = document.querySelector("[data-chat-dashboard]");
+    if (!dashboard) return;
+
+    dashboard.querySelectorAll("[data-chat-link]").forEach(function (link) {
+      link.addEventListener("click", function () {
+        var rideId = link.getAttribute("data-ride-id");
+        if (!rideId) return;
+
+        dashboard.querySelectorAll("[data-chat-unread-dot]").forEach(function (dot) {
+          if (dot.getAttribute("data-ride-id") === rideId) {
+            dot.remove();
+          }
+        });
+      });
+    });
+
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
   }
 
   /* ---------------------------------------------------------- auth page */
@@ -115,8 +140,8 @@
     var empty = document.querySelector("[data-rides-empty]");
     var applyBtn = document.querySelector("[data-rides-apply]");
     var form = document.querySelector("[data-rides-filters]");
-    var departure = form ? form.querySelector("input[name='departure']") : null;
-    var destination = form ? form.querySelector("input[name='destination']") : null;
+    var departure = form ? form.querySelector("[name='departure']") : null;
+    var destination = form ? form.querySelector("[name='destination']") : null;
     var cards = Array.prototype.slice.call(grid.querySelectorAll("[data-ride]"));
     var recommendedOrder = cards.slice();
     var fields = { q: search, departure: departure, destination: destination };
@@ -209,9 +234,16 @@
     }
 
     // All three boxes filter live, so the Apply button has nothing left to do and
-    // submitting would only cost a round trip.
+    // submitting would only cost a round trip. Departure/destination are <select>
+    // boxes, which fire "change" rather than "input" in some browsers, so listen
+    // for both.
     Object.keys(fields).forEach(function (k) {
-      if (fields[k]) fields[k].addEventListener("input", function () {
+      if (!fields[k]) return;
+      fields[k].addEventListener("input", function () {
+        apply();
+        syncHash();
+      });
+      fields[k].addEventListener("change", function () {
         apply();
         syncHash();
       });

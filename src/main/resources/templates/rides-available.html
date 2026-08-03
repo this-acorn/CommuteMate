@@ -40,16 +40,36 @@
              class="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
           </div>
 
-       <div>
-      <input type="text" name="departure" th:value="${departure}"
-             placeholder="Departure, e.g. Metrotown"
-             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+       <div class="relative">
+      <select name="departure"
+              class="flex h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm">
+        <option value="" th:selected="${#strings.isEmpty(departure)}">Any departure</option>
+        <optgroup label="Transit hubs &amp; neighbourhoods">
+          <option th:each="stop : ${communityStops}" th:value="${stop}" th:text="${stop}"
+                  th:selected="${stop == departure}"></option>
+        </optgroup>
+        <optgroup label="SFU Burnaby campus">
+          <option th:each="stop : ${campusStops}" th:value="${stop}" th:text="${stop}"
+                  th:selected="${stop == departure}"></option>
+        </optgroup>
+      </select>
+      <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
         </div>
 
-        <div>
-      <input type="text" name="destination" th:value="${destination}"
-             placeholder="Destination, e.g. SFU"
-             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+        <div class="relative">
+      <select name="destination"
+              class="flex h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm">
+        <option value="" th:selected="${#strings.isEmpty(destination)}">Any destination</option>
+        <optgroup label="SFU Burnaby campus">
+          <option th:each="stop : ${campusStops}" th:value="${stop}" th:text="${stop}"
+                  th:selected="${stop == destination}"></option>
+        </optgroup>
+        <optgroup label="Transit hubs &amp; neighbourhoods">
+          <option th:each="stop : ${communityStops}" th:value="${stop}" th:text="${stop}"
+                  th:selected="${stop == destination}"></option>
+        </optgroup>
+      </select>
+      <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
        </div>
       </div>
 

@@ -64,6 +64,8 @@ public class RidesController extends AuthenticatedController {
     model.addAttribute("destination", destination == null ? "" : destination);
     model.addAttribute("sort", sort);
     model.addAttribute("sortOptions", SORT_OPTIONS);
+    model.addAttribute("communityStops", RideLocations.COMMUNITY_STOPS);
+    model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
     return "rides-available";
 }
  
@@ -192,7 +194,8 @@ public class RidesController extends AuthenticatedController {
         Profile profile = requireCurrentProfile();
         try {
             coordinationService.deleteOwnedRide(rideId, profile);
-            redirect.addFlashAttribute("successMessage", "Ride and all of its requests were deleted.");
+            redirect.addFlashAttribute("successMessage",
+                    "Ride, requests, and conversation were deleted.");
         } catch (RideOperationException ex) {
             redirect.addFlashAttribute("errorMessage", ex.getMessage());
         }

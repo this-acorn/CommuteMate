@@ -92,6 +92,12 @@
                 th:text="${myRequest.status.label()}">Pending</span>
         </div>
 
+        <a th:if="${owner or (myRequest != null and myRequest.status.name() == 'CONFIRMED')}"
+           th:href="@{/rides/{id}/chat(id=${ride.id})}"
+           class="mt-5 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">
+          Open ride chat
+        </a>
+
         <form th:if="${!owner and upcoming and profile.riderCapable and !ride.full and (myRequest == null or myRequest.status.name() == 'CANCELLED' or myRequest.status.name() == 'REJECTED')}"
               method="post" th:action="@{/rides/{id}/requests(id=${ride.id})}" class="mt-5">
           <button type="submit" class="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">

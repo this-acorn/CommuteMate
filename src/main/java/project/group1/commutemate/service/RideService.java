@@ -61,19 +61,53 @@ public class RideService {
         return id != null && rideRepository.existsById(id);
     }
 
-    public List<Ride> search(String query, String sort) {
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        List<Ride> result = new ArrayList<>();
-        for (Ride ride : findAllUpcoming()) {
-            String haystack = (ride.getFrom() + " " + ride.getTo() + " " + ride.getDriver())
-                    .toLowerCase(Locale.ROOT);
-            if (haystack.contains(q)) {
-                result.add(ride);
-            }
+   
+
+    public List<Ride> recommended(String query, String departure, String destination, String sort) {
+    String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+    String dep = departure == null ? "" : departure.trim().toLowerCase(Locale.ROOT);
+    String dest = destination == null ? "" : destination.trim().toLowerCase(Locale.ROOT);
+
+    List<Ride> result = new ArrayList<>();
+
+    for (Ride ride : findAllUpcoming()) {
+        if (ride.isFull()) {
+            continue;
         }
-        result.sort(comparatorFor(sort));
-        return result;
+        String from = ride.getFrom() == null ? "" : ride.getFrom().toLowerCase(Locale.ROOT);
+        String to = ride.getTo() == null ? "" : ride.getTo().toLowerCase(Locale.ROOT);
+        String driver = ride.getDriver() == null ? "" : ride.getDriver().toLowerCase(Locale.ROOT);
+
+        boolean matchesSearch = q.isBlank()
+                || from.contains(q)
+                || to.contains(q)
+                || driver.contains(q);
+
+        boolean matchesDeparture = dep.isBlank() || from.contains(dep);
+        boolean matchesDestination = dest.isBlank() || to.contains(dest);
+
+        if (matchesSearch && matchesDeparture && matchesDestination) {
+            result.add(ride);
+        }
     }
+
+    if (sort != null && !"Recommended".equals(sort)) {
+    result.sort(comparatorFor(sort));
+} else {
+    result.sort(recommendedComparator());
+}
+
+    return result;
+}
+
+private Comparator<Ride> recommendedComparator() {
+    return Comparator
+            .comparingInt(Ride::getSeatsLeft).reversed()
+            .thenComparing(Comparator.comparingInt(Ride::getEcoScore).reversed())
+            .thenComparing(Comparator.comparingDouble(Ride::getRating).reversed())
+            .thenComparingInt(Ride::getPrice)
+            .thenComparing(Ride::getDepartAt);
+}
 
     private Comparator<Ride> comparatorFor(String sort) {
         if (sort == null) {

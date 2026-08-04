@@ -12,12 +12,12 @@
     <div th:if="${errorMessage}" class="mb-6 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" th:text="${errorMessage}"></div>
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p class="text-sm font-medium text-primary">Available rides</p>
+        <p class="text-sm font-medium text-primary">Recommended rides</p>
         <h1 class="mt-1 font-display text-3xl font-semibold tracking-tight md:text-4xl">
           <span data-rides-count="data-rides-count" th:text="${#lists.size(rides)}">4</span> rides heading up the mountain
         </h1>
         <p class="mt-1.5 text-sm text-muted-foreground">
-          Verified SFU drivers · departures in the next 2 hours
+          Recommended SFU rides ranked by pickup, destination, seats, price, eco-score, and rating
         </p>
       </div>
     </div>

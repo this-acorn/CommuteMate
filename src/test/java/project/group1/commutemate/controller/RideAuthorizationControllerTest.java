@@ -153,25 +153,10 @@ class RideAuthorizationControllerTest {
             null
          );
 
-         Ride coquitlamRide = new Ride(
-            "driver2@sfu.ca",
-            "Other Driver",
-            "OD",
-            "Coquitlam Central",
-            "SFU Burnaby — Convocation Mall",
-            LocalDateTime.now().plusHours(1),
-            3,
-            0,
-            4,
-            35,
-            68,
-            "Test Car",
-            4.7,
-            null
-          );
+         
 
-         when(rideService.search("", "Departure"))
-            .thenReturn(List.of(metrotownRide, coquitlamRide));
+         when(rideService.recommended("", "Metrotown", "SFU", "Recommended"))
+        .thenReturn(List.of(metrotownRide));
 
          mockMvc.perform(get("/rides/available")
                     .param("departure", "Metrotown")
@@ -180,10 +165,10 @@ class RideAuthorizationControllerTest {
             .andExpect(view().name("rides-available"))
             .andExpect(model().attribute("departure", "Metrotown"))
             .andExpect(model().attribute("destination", "SFU"))
-            .andExpect(model().attribute("sort", "Departure"))
+            .andExpect(model().attribute("sort", "Recommended"))
             .andExpect(model().attribute("rides", List.of(metrotownRide)));
 
-          verify(rideService).search("", "Departure");
+          verify(rideService).recommended("", "Metrotown", "SFU", "Recommended");
 }
 
 }

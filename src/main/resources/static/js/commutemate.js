@@ -143,7 +143,7 @@
     var departure = form ? form.querySelector("[name='departure']") : null;
     var destination = form ? form.querySelector("[name='destination']") : null;
     var cards = Array.prototype.slice.call(grid.querySelectorAll("[data-ride]"));
-
+    var recommendedOrder = cards.slice();
     var fields = { q: search, departure: departure, destination: destination };
 
     // The server filters on these too, so arriving with them in the URL renders a
@@ -185,6 +185,7 @@
     }
 
     var sorters = {
+      "Recommended": function () { return 0; },
       "Departure": function (a, b) { return str(a, "depart").localeCompare(str(b, "depart")); },
       "Price": function (a, b) { return num(a, "price") - num(b, "price"); },
       "Eco-Score": function (a, b) { return num(b, "eco") - num(a, "eco"); },
@@ -202,7 +203,9 @@
       var to = val(destination);
       var visible = 0;
 
-      var ordered = cards.slice().sort(sorters[currentSort] || sorters.Departure);
+      var ordered = currentSort === "Recommended"
+    ? recommendedOrder.slice()
+    : cards.slice().sort(sorters[currentSort] || sorters.Departure);
       ordered.forEach(function (card) {
         var match = str(card, "search").indexOf(q) !== -1
           && str(card, "from").indexOf(from) !== -1

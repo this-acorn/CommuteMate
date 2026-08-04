@@ -31,7 +31,7 @@ import project.group1.commutemate.service.RideService;
 @Controller
 public class RidesController extends AuthenticatedController {
 
-    private static final String[] SORT_OPTIONS = {"Departure", "Price", "Eco-Score", "Rating"};
+    private static final String[] SORT_OPTIONS = {"Recommended", "Departure", "Price", "Eco-Score", "Rating"};
 
     private final RideService rideService;
     private final RideCoordinationService coordinationService;
@@ -53,22 +53,10 @@ public class RidesController extends AuthenticatedController {
         public String available(@RequestParam(name = "q", required = false, defaultValue = "") String query,
                         @RequestParam(name = "departure", required = false) String departure,
                         @RequestParam(name = "destination", required = false) String destination,
-                        @RequestParam(required = false, defaultValue = "Departure") String sort,
+                        @RequestParam(required = false, defaultValue = "Recommended") String sort,
                         Model model) {
 
-                      List<Ride> rides = rideService.search(query, sort);
-
-    if (hasText(departure)) {
-        rides = rides.stream()
-                .filter(ride -> containsIgnoreCase(ride.getFrom(), departure))
-                .toList();
-    }
-
-    if (hasText(destination)) {
-        rides = rides.stream()
-                .filter(ride -> containsIgnoreCase(ride.getTo(), destination))
-                .toList();
-    }
+    List<Ride> rides = rideService.recommended(query, departure, destination, sort);
 
     model.addAttribute("rides", rides);
     model.addAttribute("query", query == null ? "" : query);
@@ -80,16 +68,7 @@ public class RidesController extends AuthenticatedController {
     model.addAttribute("campusStops", RideLocations.CAMPUS_STOPS);
     return "rides-available";
 }
-        private boolean hasText(String value) {
-    return value != null && !value.isBlank();
-}
-
-    private boolean containsIgnoreCase(String text, String search) {
-    if (text == null || search == null) {
-        return false;
-    }
-    return text.toLowerCase().contains(search.toLowerCase());
-}
+ 
 
     //  ride details
     @GetMapping("/rides/{rideId}")

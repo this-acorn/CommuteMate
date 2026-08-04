@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Your profile — CommuteMate',
+  'View and update your CommuteMate account details.')}"></head>
+<body>
+<div class="min-h-screen bg-background">
+
+  <header th:replace="~{fragments/layout :: nav('')}"></header>
+
+  <main class="mx-auto max-w-2xl px-6 py-10">
+    <p class="text-sm font-medium text-primary">Your profile</p>
+    <h1 class="mt-1 font-display text-3xl font-semibold tracking-tight md:text-4xl">Account settings</h1>
+    <p class="mt-1.5 text-sm text-muted-foreground">Update your name or change your password.</p>
+
+    <div class="mt-8 rounded-2xl border border-border bg-card p-6 card-lift">
+      <h2 class="font-display text-lg font-semibold">Profile details</h2>
+      <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt class="text-muted-foreground">Email</dt>
+          <dd class="font-medium" th:text="${profile.email}">alex@sfu.ca</dd>
+        </div>
+        <div>
+          <dt class="text-muted-foreground">Role</dt>
+          <dd class="font-medium capitalize" th:text="${profile.role.label()}">rider</dd>
+        </div>
+        <div>
+          <dt class="text-muted-foreground">Points</dt>
+          <dd class="font-medium" th:text="${profile.points}">0</dd>
+        </div>
+        <div>
+          <dt class="text-muted-foreground">Eco-Score</dt>
+          <dd class="font-medium" th:text="${profile.ecoScore}">0</dd>
+        </div>
+      </dl>
+      <p class="mt-3 text-xs text-muted-foreground">
+        Email and role can't be changed here — email is your sign-in identity, and role determines which dashboard you use.
+      </p>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-border bg-card p-6 card-lift">
+      <h2 class="font-display text-lg font-semibold">Full name</h2>
+      <p th:if="${nameSuccess}" class="mt-3 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary" th:text="${nameSuccess}"></p>
+      <p th:if="${nameError}" class="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" th:text="${nameError}"></p>
+
+      <form th:action="@{/profile/name}" th:object="${nameForm}" method="post" class="mt-4 space-y-3">
+        <div class="space-y-1.5">
+          <label for="fullName" class="text-sm font-medium">Full name</label>
+          <input id="fullName" th:field="*{fullName}"
+                 class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+        </div>
+        <button type="submit"
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
+          Save name
+        </button>
+      </form>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-border bg-card p-6 card-lift">
+      <h2 class="font-display text-lg font-semibold">Change password</h2>
+      <p th:if="${passwordSuccess}" class="mt-3 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary" th:text="${passwordSuccess}"></p>
+      <p th:if="${passwordError}" class="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" th:text="${passwordError}"></p>
+
+      <form th:action="@{/profile/password}" th:object="${passwordForm}" method="post" class="mt-4 space-y-3">
+        <div class="space-y-1.5">
+          <label for="currentPassword" class="text-sm font-medium">Current password</label>
+          <input id="currentPassword" type="password" th:field="*{currentPassword}"
+                 class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+        </div>
+        <div class="space-y-1.5">
+          <label for="newPassword" class="text-sm font-medium">New password</label>
+          <input id="newPassword" type="password" th:field="*{newPassword}"
+                 class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+        </div>
+        <div class="space-y-1.5">
+          <label for="confirmPassword" class="text-sm font-medium">Confirm new password</label>
+          <input id="confirmPassword" type="password" th:field="*{confirmPassword}"
+                 class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" />
+        </div>
+        <button type="submit"
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
+          Update password
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
+</div>
+</body>
+</html>

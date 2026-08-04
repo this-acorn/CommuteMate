@@ -175,6 +175,24 @@ private Comparator<Ride> recommendedComparator() {
         return LocalDateTime.now(clock);
     }
 
+    // Epic 1: keeps a driver's display name in sync with their profile after
+    // a name change. Ride.driver/driverInitials are copied from the driver's
+    // profile at ride-creation time (denormalized) so ride cards render
+    // without joining back to User, which means they go stale otherwise.
+    @Transactional
+    public void renameDriver(String driverEmail, String newFullName) {
+        List<Ride> rides = rideRepository.findByDriverEmailIgnoreCase(driverEmail);
+        if (rides.isEmpty()) {
+            return;
+        }
+        String initials = initialsOf(newFullName);
+        for (Ride ride : rides) {
+            ride.setDriver(newFullName);
+            ride.setDriverInitials(initials);
+        }
+        rideRepository.saveAll(rides);
+    }
+
     private String initialsOf(String name) {
         if (name == null || name.isBlank()) {
             return "?";

@@ -96,6 +96,32 @@ class RideCoordinationServiceTest {
     }
 
     @Test
+    void requestSeatRejectsFullRide() {
+        ride.setSeatsTaken(ride.getSeats());
+        when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.requestSeat(10L, rider));
+
+        assertEquals("This ride is full.", error.getMessage());
+        assertEquals(ride.getSeats(), ride.getSeatsTaken());
+        verify(requestRepository, never()).save(any(RideRequest.class));
+    }
+
+    @Test
+    void requestSeatRejectsDepartedRide() {
+        ride.setDepartAt(LocalDateTime.now(CLOCK).minusMinutes(1));
+        when(rideRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ride));
+
+        RideOperationException error = assertThrows(RideOperationException.class,
+                () -> service.requestSeat(10L, rider));
+
+        assertEquals("This ride has already departed.", error.getMessage());
+        assertEquals(0, ride.getSeatsTaken());
+        verify(requestRepository, never()).save(any(RideRequest.class));
+    }
+
+    @Test
     void cancelledRequestCanBeSubmittedAgainAndRefreshesRiderIdentity() {
         Profile updatedRider = new Profile(
                 "  RIDER@SFU.CA  ", "  Updated Rider  ", Role.RIDER, 0, 0);

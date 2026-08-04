@@ -142,8 +142,16 @@ public class RidesController extends AuthenticatedController {
         if (!model.containsAttribute("formFrom")) {
             model.addAttribute("formFrom", RideLocations.DEFAULT_PICKUP);
             model.addAttribute("formTo", RideLocations.DEFAULT_DESTINATION);
-            model.addAttribute("formDate", minimumDate);
-            model.addAttribute("formTime", "08:15");
+            // Issue #42: a fixed "08:15" default became a past time (and
+            // failed validation immediately) for anyone opening this form
+            // after 8:15am. Suggest 30 minutes from now, rounded up to the
+            // next quarter hour, so it's always a valid future time — the
+            // date naturally rolls over to tomorrow if that crosses midnight.
+            LocalDateTime suggested = LocalDateTime.now(clock).plusMinutes(30);
+            int roundedMinute = ((suggested.getMinute() / 15) + 1) * 15;
+            suggested = suggested.withSecond(0).withNano(0).withMinute(0).plusMinutes(roundedMinute);
+            model.addAttribute("formDate", suggested.toLocalDate().toString());
+            model.addAttribute("formTime", String.format("%02d:%02d", suggested.getHour(), suggested.getMinute()));
             model.addAttribute("formSeats", 3);
             model.addAttribute("formPrice", 4);
             model.addAttribute("formNotes", "");

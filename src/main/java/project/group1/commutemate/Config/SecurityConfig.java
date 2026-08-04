@@ -150,7 +150,7 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler())
             )
             .logout(logout -> logout
-                .logoutRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/logout"))
+                .logoutRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/logout"))
                 .logoutSuccessUrl("/")
                 .permitAll()
             );

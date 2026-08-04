@@ -55,7 +55,7 @@ class RidesAvailableFiltersViewTest {
     void signInRider() {
         when(currentUserService.currentProfile()).thenReturn(Optional.of(
                 new Profile("rider@sfu.ca", "Demo Rider", Role.RIDER, 0, 0)));
-        when(rideService.search("", "Departure")).thenReturn(List.of());
+        when(rideService.recommended("", null, null, "Recommended")).thenReturn(List.of());
     }
 
     @Test

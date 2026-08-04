@@ -11,34 +11,30 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import project.group1.commutemate.User.CurrentUserService;
+import project.group1.commutemate.User.ProfileUpdateService;
 import project.group1.commutemate.User.UpdateNameRequest;
 import project.group1.commutemate.User.UpdatePasswordRequest;
 import project.group1.commutemate.User.User;
 import project.group1.commutemate.User.UserRepository;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.service.NotificationService;
-import project.group1.commutemate.service.RideCoordinationService;
-import project.group1.commutemate.service.RideService;
 
 @Controller
 public class ProfileController extends AuthenticatedController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final RideService rideService;
-    private final RideCoordinationService rideCoordinationService;
+    private final ProfileUpdateService profileUpdateService;
 
     public ProfileController(UserRepository userRepository,
                               PasswordEncoder passwordEncoder,
                               CurrentUserService currentUserService,
                               NotificationService notificationService,
-                              RideService rideService,
-                              RideCoordinationService rideCoordinationService) {
+                              ProfileUpdateService profileUpdateService) {
         super(currentUserService, notificationService);
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.rideService = rideService;
-        this.rideCoordinationService = rideCoordinationService;
+        this.profileUpdateService = profileUpdateService;
     }
 
     @GetMapping("/profile")
@@ -64,18 +60,7 @@ public class ProfileController extends AuthenticatedController {
         }
 
         Profile profile = requireCurrentProfile();
-        User user = userRepository.findByEmailIgnoreCase(profile.getEmail())
-                .orElseThrow(() -> new IllegalStateException("Signed-in member has no account row"));
-        String newFullName = nameForm.getFullName().trim();
-        user.setFullName(newFullName);
-        userRepository.save(user);
-
-        // Keep denormalized display names in sync — a driver's past/current
-        // rides and a rider's past/current requests each carry a copy of the
-        // name taken at creation time. Whichever role this user isn't will
-        // simply have nothing to update.
-        rideService.renameDriver(profile.getEmail(), newFullName);
-        rideCoordinationService.renameRider(profile.getEmail(), newFullName);
+        profileUpdateService.renameUser(profile.getEmail(), nameForm.getFullName().trim());
 
         redirectAttributes.addFlashAttribute("nameSuccess", "Name updated.");
         return "redirect:/profile";

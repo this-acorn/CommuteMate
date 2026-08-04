@@ -16,10 +16,9 @@ import org.springframework.http.MediaType;
 import project.group1.commutemate.Config.SecurityConfig;
 import project.group1.commutemate.User.CurrentUserService;
 import project.group1.commutemate.User.CustomUserDetailsService;
+import project.group1.commutemate.User.ProfileUpdateService;
 import project.group1.commutemate.User.UserRepository;
 import project.group1.commutemate.service.NotificationService;
-import project.group1.commutemate.service.RideCoordinationService;
-import project.group1.commutemate.service.RideService;
 
 /**
  * Unlike ProfileControllerTest, this suite leaves Spring Security's filter
@@ -51,10 +50,7 @@ class ProfileSecurityTest {
     private NotificationService notificationService;
 
     @MockitoBean
-    private RideService rideService;
-
-    @MockitoBean
-    private RideCoordinationService rideCoordinationService;
+    private ProfileUpdateService profileUpdateService;
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;

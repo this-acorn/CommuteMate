@@ -25,13 +25,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import project.group1.commutemate.User.CurrentUserService;
+import project.group1.commutemate.User.ProfileUpdateService;
 import project.group1.commutemate.User.User;
 import project.group1.commutemate.User.UserRepository;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.Role;
 import project.group1.commutemate.service.NotificationService;
-import project.group1.commutemate.service.RideCoordinationService;
-import project.group1.commutemate.service.RideService;
 
 @WebMvcTest(controllers = ProfileController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -55,10 +54,7 @@ class ProfileControllerTest {
     private NotificationService notificationService;
 
     @MockitoBean
-    private RideService rideService;
-
-    @MockitoBean
-    private RideCoordinationService rideCoordinationService;
+    private ProfileUpdateService profileUpdateService;
 
     private User storedUser;
 
@@ -94,7 +90,7 @@ class ProfileControllerTest {
                 .andExpect(redirectedUrl("/profile"))
                 .andExpect(flash().attribute("nameSuccess", "Name updated."));
 
-        verify(userRepository).save(argThat(u -> "Riley R. Rider".equals(u.getFullName())));
+        verify(profileUpdateService).renameUser(SIGNED_IN_EMAIL, "Riley R. Rider");
     }
 
     @Test
@@ -103,7 +99,7 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("blank")));
 
-        verify(userRepository, never()).save(any());
+        verify(profileUpdateService, never()).renameUser(any(), any());
     }
 
     @Test

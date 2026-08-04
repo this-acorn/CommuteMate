@@ -21,6 +21,19 @@ public final class LocationCoordinates {
 
     /** Simple lat/lng pair for a named location. */
     public record LatLng(double lat, double lng) {
+
+        private static final double EARTH_RADIUS_KM = 6371.0;
+
+        /** Great-circle distance to another point in km (Haversine). */
+        public double distanceKmTo(LatLng other) {
+            double dLat = Math.toRadians(other.lat() - this.lat());
+            double dLng = Math.toRadians(other.lng() - this.lng());
+            double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                    + Math.cos(Math.toRadians(this.lat())) * Math.cos(Math.toRadians(other.lat()))
+                    * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return EARTH_RADIUS_KM * c;
+        }
     }
 
     private LocationCoordinates() {

@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
+import project.group1.commutemate.model.RideRequest;
+import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 
 /**
@@ -29,10 +31,17 @@ import project.group1.commutemate.service.RideService;
 @Service
 public class RewardService {
 
-    private final RideService rideService;
+    // Flat rate per completed ride — riders don't have a "seats offered"
+    // variable to scale by like drivers do. All-time cumulative, matching
+    // driver points (see summaryForDriver).
+    private static final int RIDER_POINTS_PER_COMPLETED_RIDE = 10;
 
-    public RewardService(RideService rideService) {
+    private final RideService rideService;
+    private final RideCoordinationService coordinationService;
+
+    public RewardService(RideService rideService, RideCoordinationService coordinationService) {
         this.rideService = rideService;
+        this.coordinationService = coordinationService;
     }
 
     /**
@@ -62,6 +71,18 @@ public class RewardService {
             return RewardSummary.EMPTY;
         }
         return new RewardSummary(totalPoints, ecoScoreSum / completedRideCount);
+    }
+
+    /**
+     * All-time reward points for a rider — flat amount per COMPLETED
+     * request. No spending mechanism yet (future item).
+     */
+    public int totalPointsForRider(String riderEmail) {
+        List<RideRequest> requests = coordinationService.findRequestsForRider(riderEmail);
+        long completedCount = requests.stream()
+                .filter(request -> request.getStatus() == RequestStatus.COMPLETED)
+                .count();
+        return (int) (completedCount * RIDER_POINTS_PER_COMPLETED_RIDE);
     }
 
     private boolean hasCompletedRider(Ride ride) {

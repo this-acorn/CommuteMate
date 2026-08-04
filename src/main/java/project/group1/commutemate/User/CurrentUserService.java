@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import project.group1.commutemate.RewardService;
 import project.group1.commutemate.RewardSummary;
 import project.group1.commutemate.model.Profile;
+import project.group1.commutemate.model.Role;
 
 /**
  * Resolves the signed-in member (if any) from the security context,
@@ -34,16 +35,24 @@ public class CurrentUserService {
         }
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(u -> {
-                    // Epic 4: completion-based rewards, resolved from draft.
-                    // Keyed by email. Single query via RewardSummary instead
-                    // of two separate calls (review feedback).
-                    RewardSummary reward = rewardService.summaryForDriver(u.getEmail());
+                    // Drivers earn per-ride points/eco-score; riders earn a
+                    // flat amount per completed ride and have no eco-score.
+                    int points;
+                    int ecoScore;
+                    if (u.getRole() == Role.DRIVER) {
+                        RewardSummary reward = rewardService.summaryForDriver(u.getEmail());
+                        points = reward.totalPoints();
+                        ecoScore = reward.averageEcoScore();
+                    } else {
+                        points = rewardService.totalPointsForRider(u.getEmail());
+                        ecoScore = 0;
+                    }
                     return new Profile(
                             u.getEmail(),
                             u.getFullName(),
                             u.getRole(),
-                            reward.totalPoints(),
-                            reward.averageEcoScore());
+                            points,
+                            ecoScore);
                 });
     }
 }

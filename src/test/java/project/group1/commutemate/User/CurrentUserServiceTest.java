@@ -78,4 +78,25 @@ class CurrentUserServiceTest {
         assertEquals(35, profile.get().getPoints());
         assertEquals(75, profile.get().getEcoScore());
     }
+
+    @Test
+    void currentProfile_usesRiderPoints_forARiderAccount() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("rider@sfu.ca", "n/a", java.util.List.of()));
+
+        User user = new User();
+        user.setEmail("rider@sfu.ca");
+        user.setFullName("Demo Rider");
+        user.setRole(Role.RIDER);
+
+        when(userRepository.findByEmailIgnoreCase("rider@sfu.ca")).thenReturn(Optional.of(user));
+        when(rewardService.totalPointsForRider("rider@sfu.ca")).thenReturn(30);
+
+        CurrentUserService service = new CurrentUserService(userRepository, rewardService);
+        Optional<Profile> profile = service.currentProfile();
+
+        assertTrue(profile.isPresent());
+        assertEquals(30, profile.get().getPoints());
+        assertEquals(0, profile.get().getEcoScore());
+    }
 }

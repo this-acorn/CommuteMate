@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
 import project.group1.commutemate.model.RideRequest;
+import project.group1.commutemate.service.RideCoordinationService;
 import project.group1.commutemate.service.RideService;
 
 /**
@@ -31,11 +32,14 @@ class RewardServiceTest {
     @Mock
     private RideService rideService;
 
+    @Mock
+    private RideCoordinationService coordinationService;
+
     private RewardService rewardService;
 
     @BeforeEach
     void setUp() {
-        rewardService = new RewardService(rideService);
+        rewardService = new RewardService(rideService, coordinationService);
     }
 
     private Ride ride(String driverEmail, int points, int ecoScore) {
@@ -143,5 +147,31 @@ class RewardServiceTest {
 
         org.mockito.Mockito.verify(rideService, org.mockito.Mockito.times(1))
                 .findByDriverEmail("priya@sfu.ca");
+    }
+
+    @Test
+    void totalPointsForRider_countsOnlyCompletedRequests() {
+        Ride ride = ride("driver@sfu.ca", 20, 80);
+        RideRequest completed1 = new RideRequest(ride, "emily@sfu.ca", "Emily");
+        completed1.setStatus(RequestStatus.COMPLETED);
+        RideRequest completed2 = new RideRequest(ride, "emily@sfu.ca", "Emily");
+        completed2.setStatus(RequestStatus.COMPLETED);
+        RideRequest stillPending = new RideRequest(ride, "emily@sfu.ca", "Emily");
+        stillPending.setStatus(RequestStatus.PENDING);
+
+        when(coordinationService.findRequestsForRider("emily@sfu.ca"))
+                .thenReturn(List.of(completed1, completed2, stillPending));
+
+        int points = rewardService.totalPointsForRider("emily@sfu.ca");
+
+        assertEquals(20, points); // 2 completed rides * 10 points each
+    }
+
+    @Test
+    void totalPointsForRider_isZero_whenNoCompletedRequests() {
+        when(coordinationService.findRequestsForRider("newrider@sfu.ca"))
+                .thenReturn(List.of());
+
+        assertEquals(0, rewardService.totalPointsForRider("newrider@sfu.ca"));
     }
 }

@@ -1,6 +1,7 @@
 package project.group1.commutemate.controller;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import project.group1.commutemate.User.CurrentUserService;
+import project.group1.commutemate.model.LocationCoordinates;
 import project.group1.commutemate.model.Profile;
 import project.group1.commutemate.model.RequestStatus;
 import project.group1.commutemate.model.Ride;
@@ -25,6 +27,9 @@ import project.group1.commutemate.service.WeatherService;
 /** Rider and driver dashboards. */
 @Controller
 public class DashboardController extends AuthenticatedController {
+
+    // Standard passenger-car emissions estimate (kg CO2 per km).
+    private static final double CO2_KG_PER_KM = 0.15;
 
     private final RideService rideService;
     private final RideCoordinationService coordinationService;
@@ -72,10 +77,39 @@ public class DashboardController extends AuthenticatedController {
                 .limit(2)
                 .toList();
 
+        // Real rides-this-month / amount-saved, reusing the already-fetched
+        // request list instead of another query.
+        LocalDate startOfMonth = now.toLocalDate().withDayOfMonth(1);
+        List<RideRequest> completedThisMonth = requests.stream()
+                .filter(request -> request.getStatus() == RequestStatus.COMPLETED)
+                .filter(request -> request.getRide().getDepartAt() != null
+                        && !request.getRide().getDepartAt().toLocalDate().isBefore(startOfMonth))
+                .toList();
+        int ridesThisMonth = completedThisMonth.size();
+        int amountSaved = completedThisMonth.stream().mapToInt(request -> request.getRide().getPrice()).sum();
+
+        // Real distance (Haversine) times a standard emissions estimate.
+        // Rides with unrecognized locations just don't contribute.
+        double co2KgAvoided = completedThisMonth.stream()
+                .mapToDouble(request -> {
+                    Ride ride = request.getRide();
+                    var pickup = LocationCoordinates.lookup(ride.getFrom());
+                    var destination = LocationCoordinates.lookup(ride.getTo());
+                    if (pickup.isEmpty() || destination.isEmpty()) {
+                        return 0.0;
+                    }
+                    double distanceKm = pickup.get().distanceKmTo(destination.get());
+                    return distanceKm * CO2_KG_PER_KM;
+                })
+                .sum();
+
         model.addAttribute("now", now);
         model.addAttribute("nextRide", nextConfirmedRide);
         model.addAttribute("riderRequests", requests);
         model.addAttribute("suggested", suggested);
+        model.addAttribute("ridesThisMonth", ridesThisMonth);
+        model.addAttribute("amountSaved", amountSaved);
+        model.addAttribute("co2KgAvoided", Math.round(co2KgAvoided));
         model.addAttribute("unreadChatRideIds",
                 chatService.findUnreadRideIds(profile, chatRideIdsForRider(requests)));
         model.addAttribute("availableRideCount",

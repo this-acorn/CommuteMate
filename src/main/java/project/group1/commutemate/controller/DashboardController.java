@@ -147,6 +147,7 @@ public class DashboardController extends AuthenticatedController {
         model.addAttribute("confirmedRiderCount", requests.stream()
                 .filter(request -> request.getStatus() == RequestStatus.CONFIRMED)
                 .count());
+        model.addAttribute("transit", transitService.getTransitInfo());
         model.addAttribute("weather", weatherService.getCurrentWeather().orElse(null));
         return "dashboard-driver";
     }

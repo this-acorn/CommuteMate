@@ -2,7 +2,7 @@
 
 A carpool and commute-planning web app for the Simon Fraser University community. Find a ride, coordinate with fellow commuters, and check live transit and weather in one place.
 
-[Live demo](https://commutemate-jfk7.onrender.com/)
+[Live demo](https://commutemate-km3h.onrender.com/)
 
 ## Features
 
